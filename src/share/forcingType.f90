@@ -11,9 +11,8 @@ type, public :: forcing_type
   ! atmospheric inputs & outputs (surface meteorology)
   real, dimension(:), allocatable   :: tair       ! surface air temperature [K]
   real, dimension(:), allocatable   :: precip     ! total input precipitation [mm/s]
-  real, dimension(:), allocatable   :: precip_scf ! total input precipitation with SCF applied [mm/s]
-  real, dimension(:), allocatable   :: pa         ! snow17 surface pressure (Pa) 
-  real                              :: precip_comb, precip_scf_comb, tair_comb    ! areally averaged forcings across HRUs
+  real, dimension(:), allocatable   :: pet        ! potential evapotranspiration [mm]
+  real                              :: precip_comb, pet_comb, tair_comb    ! areally averaged forcings across HRUs
 
   contains
 
@@ -34,17 +33,15 @@ contains
     ! -- variable allocations (time dim not needed since forcings are one-rec scalars)
     allocate(this%tair       (n_hrus))
     allocate(this%precip     (n_hrus))
-    allocate(this%precip_scf (n_hrus))
-    allocate(this%pa         (n_hrus))
+    allocate(this%pet        (n_hrus))
     
     ! -- default assignments
     this%precip(:)         = huge(1.0)
-    this%precip_scf(:)     = huge(1.0)
+    this%pet       (:)     = huge(1.0)
     this%tair(:)           = huge(1.0)
-    this%pa(:)             = huge(1.0)
     this%precip_comb       = 0.0
     this%tair_comb         = 0.0
-    this%precip_scf_comb   = 0.0
+    this%pet_comb          = 0.0
     
   end subroutine initForcing
   

@@ -3,24 +3,24 @@ implicit none
 
   ! variable definitions
   character(len = 20)     :: main_id              ! ID string used for main/combined output
-  integer 		          :: n_hrus		          ! number of HRU areas in parameter files
-  character(len = 1024)   :: forcing_root	      ! base name of forcing data file root
-  character(len = 1024)   :: output_root		  ! base name for output files
-  character(len = 1024)   :: snow17_param_file	  ! name for snow17 parameters
-  character(len = 1024)	  :: snow_state_out_root  ! name for snow17 state output root
-  character(len = 1024)	  :: snow_state_in_root	  ! name for snow17 state input root
+  integer 	          :: n_hrus	          ! number of HRU areas in parameter files
+  character(len = 1024)   :: forcing_root         ! base name of forcing data file root
+  character(len = 1024)   :: output_root	  ! base name for output files
+  character(len = 1024)   :: sac_param_file	  ! name for sac parameters
+  character(len = 1024)	  :: sac_state_out_root   ! name for sac state output root
+  character(len = 1024)	  :: sac_state_in_root	  ! name for sac state input root
   integer                 :: model_timestep       ! model timestep in seconds
-  integer 		          :: output_hrus 		  ! output HRU results? (1=yes; 0=no)
-  character(len = 10)     :: start_datehr	      ! YYYYMMDDHH
+  integer 	          :: output_hrus 	  ! output HRU results? (1=yes; 0=no)
+  character(len = 10)     :: start_datehr	  ! YYYYMMDDHH
   character(len = 10)     :: end_datehr	          ! YYYYMMDDHH
-  integer 		          :: warm_start_run	      ! warm restart run flag
-  integer 		          :: write_states	      ! flag to write states for a warm start run
+  integer 	          :: warm_start_run       ! warm restart run flag
+  integer 	          :: write_states         ! flag to write states for a warm start run
   
   ! namelist elements to be shared
-  namelist / SNOW17_CONTROL / forcing_root, output_root, main_id, n_hrus, output_hrus, &
+  namelist / SAC_CONTROL / forcing_root, output_root, main_id, n_hrus, output_hrus, &
                 start_datehr, end_datehr, &
-                snow17_param_file, warm_start_run, write_states, model_timestep, &
-                snow_state_in_root, snow_state_out_root
+                sac_param_file, warm_start_run, write_states, model_timestep, &
+                sac_state_in_root, sac_state_out_root
   save
 
 end module defNamelist
@@ -32,18 +32,18 @@ type, public :: namelist_type
 
   ! namelist variables
   character(len = 20)   :: main_id              ! ID string used for main/combined output
-  integer		        :: n_hrus		        ! number of HRU areas in parameter files
+  integer	        :: n_hrus	        ! number of HRU areas in parameter files
   character(len = 1024) :: forcing_root	    	! base name of forcing data file root
-  character(len = 1024) :: output_root		    ! base name for output files
-  character(len = 1024) :: snow17_param_file	! name for snow17 parameters
-  character(len = 1024)	:: snow_state_in_root	! name for snow17 state input root
-  character(len = 1024)	:: snow_state_out_root  ! name for snow17 state output root
+  character(len = 1024) :: output_root	        ! base name for output files
+  character(len = 1024) :: sac_param_file	! name for sac parameters
+  character(len = 1024)	:: sac_state_in_root	! name for sac state input root
+  character(len = 1024)	:: sac_state_out_root   ! name for sac state output root
   integer               :: model_timestep       ! model timestep in seconds
-  integer		        :: output_hrus 		    ! output HRU results? (1=yes; 0=no)
+  integer	        :: output_hrus 	        ! output HRU results? (1=yes; 0=no)
   character(len = 10)   :: start_datehr	        ! YYYYMMDDHH
   character(len = 10)   :: end_datehr	        ! YYYYMMDDHH
-  integer		        :: warm_start_run	    ! warm restart run flag
-  integer		        :: write_states	        ! flag to write states for a warm start run
+  integer	        :: warm_start_run       ! warm restart run flag
+  integer	        :: write_states	        ! flag to write states for a warm start run
   
   contains
 
@@ -66,10 +66,10 @@ contains
 
     ! -- open and read namelist file
     open(33, file=namelist_file, form="formatted")
-    read(33, SNOW17_CONTROL)
+    read(33, SAC_CONTROL)
     close(33)
     
-    print*, ' -- simulating basin ', main_id, ' with ', n_hrus, ' snowbands'
+    print*, ' -- simulating basin ', main_id, ' with ', n_hrus, ' hrus'
 
     ! -- transfer to namelist datatype
     this%main_id             = main_id
@@ -79,12 +79,12 @@ contains
     this%output_hrus         = output_hrus
     this%start_datehr        = start_datehr
     this%end_datehr          = end_datehr
-    this%snow17_param_file   = snow17_param_file
+    this%sac_param_file      = sac_param_file
     this%warm_start_run      = warm_start_run
     this%write_states        = write_states
     this%model_timestep      = model_timestep
-    this%snow_state_out_root = snow_state_out_root
-    this%snow_state_in_root  = snow_state_in_root
+    this%sac_state_out_root  = sac_state_out_root
+    this%sac_state_in_root   = sac_state_in_root
     
     ! -- namelist entry checks --
     if (this%warm_start_run .eq. 1 .and. this%write_states .eq. 1) then

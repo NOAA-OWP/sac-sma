@@ -1,10 +1,12 @@
 ! ====================================================================================
-! Driver for the Snow17 model for multiple HRUs within a basin and writes zone and areal mean output
+! Driver for the Sac-SMA model for multiple HRUs within a basin and writes zone and areal mean output
 !
 ! Adapted by A. Wood (2022) from the NCAR Snow17SacUH codebase (https://github.com/NCAR/NWS_hydro_models) 
 !   that was formulated from Office of Hydrology FORTRAN source files obtained circa 2012-2013
 ! 
 ! Feb 2022:  Reformulated to use BMI at driver level with compiler options for running in NextGen framework
+!
+! Aug 2022: Converted by R. McDaniel from Snow17 driver to Sac-SMA model driver
 !
 ! ====================================================================================
 
@@ -14,16 +16,16 @@ program multi_driver
   !  Modules
   !  Only the BMI modules need to be exposed
   !---------------------------------------------------------------------
-  use bmi_snow17_module
+  use bmi_sac_module
   use bmif_2_0
   use dateTimeUtilsModule
 
   implicit none
 
   !---------------------------------------------------------------------
-  !  Types (only the bmi_snow17 type needed)
+  !  Types (only the bmi_sac type needed)
   !---------------------------------------------------------------------
-  type (bmi_snow17)  :: m
+  type (bmi_sac)  :: m
 
   !---------------------------------------------------------------------
   !  Local variable(s) 
@@ -53,7 +55,7 @@ program multi_driver
 
   !---------------------------------------------------------------------
   ! Run the model
-  ! m%update() calls advance_in_time() subroutine in ../src/RunSnow17.f90
+  ! m%update() calls advance_in_time() subroutine in ../src/RunSac.f90
   !---------------------------------------------------------------------
   status = m%get_current_time(current_time)
   status = m%get_end_time(end_time)
@@ -75,7 +77,7 @@ program multi_driver
 
   !---------------------------------------------------------------------
   ! Finalize the model run
-  ! All model finalization code in ../src/RunSnow17.f90
+  ! All model finalization code in ../src/RunSac.f90
   !---------------------------------------------------------------------
   print*, "Finalizing..."
   status = m%finalize()

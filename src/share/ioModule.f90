@@ -10,7 +10,7 @@ module ioModule
   
 contains
 
-  subroutine read_snow17_parameters(this, param_file_name, runinfo)
+  subroutine read_sac_parameters(this, param_file_name, runinfo)
     use runInfoType
     use dateTimeUtilsModule
     implicit none
@@ -23,7 +23,7 @@ contains
   
     ! local variables
     character(len=400)      :: readline
-    character(len=50)		:: param
+    character(len=50)	    :: param
     integer    	            :: ios=0   ! specify i4b with nrtype?
     integer                 :: pos
     integer                 :: n_params_read, nh  ! counters
@@ -31,7 +31,7 @@ contains
     ! open parameter file
     open(unit=51,file=trim(param_file_name),status='old')
   
-    print*, 'Reading Snow17 parameters'
+    print*, 'Reading Sac-SMA parameters'
   
     ! --- now loop through parameter file and assign parameters 
     n_params_read = 0
@@ -56,82 +56,56 @@ contains
           case ('hru_area')
             read(readline, *, iostat=ios) this%hru_area
             n_params_read = n_params_read + 1
-          case ('latitude')
-            read(readline, *, iostat=ios) this%latitude
+          case ('uztwm')
+            read(readline, *, iostat=ios) this%uztwm
             n_params_read = n_params_read + 1
-          case ('elev')
-            read(readline, *, iostat=ios) this%elev
+          case ('uzfwm')
+            read(readline, *, iostat=ios) this%uzfwm
             n_params_read = n_params_read + 1
-          case ('mfmax')
-            read(readline, *, iostat=ios) this%mfmax
+          case ('lztwm')
+            read(readline, *, iostat=ios) this%lztwm
             n_params_read = n_params_read + 1
-          case ('mfmin')
-            read(readline, *, iostat=ios) this%mfmin
+          case ('lzfpm')
+            read(readline, *, iostat=ios) this%lzfpm
             n_params_read = n_params_read + 1
-          case ('scf')
-            read(readline, *, iostat=ios) this%scf
+          case ('lzfsm')
+            read(readline, *, iostat=ios) this%lzfsm
             n_params_read = n_params_read + 1
-          case ('uadj')
-            read(readline, *, iostat=ios) this%uadj
+          case ('adimp')
+            read(readline, *, iostat=ios) this%adimp
             n_params_read = n_params_read + 1
-          case ('si')
-            read(readline, *, iostat=ios) this%si
+          case ('uzk')
+            read(readline, *, iostat=ios) this%uzk
             n_params_read = n_params_read + 1
-          case ('pxtemp')
-            read(readline, *, iostat=ios) this%pxtemp
+          case ('lzpk')
+            read(readline, *, iostat=ios) this%lzpk
             n_params_read = n_params_read + 1
-          case ('nmf')
-            read(readline, *, iostat=ios) this%nmf
+          case ('lzsk')
+            read(readline, *, iostat=ios) this%lzsk
             n_params_read = n_params_read + 1
-          case ('tipm')
-            read(readline, *, iostat=ios) this%tipm
+          case ('zperc')
+            read(readline, *, iostat=ios) this%zperc
             n_params_read = n_params_read + 1
-          case ('mbase')
-            read(readline, *, iostat=ios) this%mbase
+          case ('rexp')
+            read(readline, *, iostat=ios) this%rexp
             n_params_read = n_params_read + 1
-          case ('plwhc')
-            read(readline, *, iostat=ios) this%plwhc
+          case ('pctim')
+            read(readline, *, iostat=ios) this%pctim
             n_params_read = n_params_read + 1
-          case ('daygm')
-            read(readline, *, iostat=ios) this%daygm
+          case ('pfree')
+            read(readline, *, iostat=ios) this%pfree
             n_params_read = n_params_read + 1
-          case ('adc1')
-            !read(readline, *, iostat=ios) this%adc(:,1)
-            read(readline, *, iostat=ios) this%adc(1,:)
+          case ('riva')
+            read(readline, *, iostat=ios) this%riva
             n_params_read = n_params_read + 1
-          case ('adc2')
-            !read(readline, *, iostat=ios) this%adc(:,2)
-            read(readline, *, iostat=ios) this%adc(2,:)
+          case ('side')
+            read(readline, *, iostat=ios) this%side
             n_params_read = n_params_read + 1
-          case ('adc3')
-            read(readline, *, iostat=ios) this%adc(3,:)
-            n_params_read = n_params_read + 1
-          case ('adc4')
-            read(readline, *, iostat=ios) this%adc(4,:)
-            n_params_read = n_params_read + 1
-          case ('adc5')
-            read(readline, *, iostat=ios) this%adc(5,:)
-            n_params_read = n_params_read + 1
-          case ('adc6')
-            read(readline, *, iostat=ios) this%adc(6,:)
-            n_params_read = n_params_read + 1
-          case ('adc7')
-            read(readline, *, iostat=ios) this%adc(7,:)
-            n_params_read = n_params_read + 1
-          case ('adc8')
-            read(readline, *, iostat=ios) this%adc(8,:)
-            n_params_read = n_params_read + 1
-          case ('adc9')
-            read(readline, *, iostat=ios) this%adc(9,:)
-            n_params_read = n_params_read + 1
-          case ('adc10')
-            read(readline, *, iostat=ios) this%adc(10,:)
-            n_params_read = n_params_read + 1
-          case ('adc11')
-            read(readline, *, iostat=ios) this%adc(11,:)
+          case ('rserv')
+            read(readline, *, iostat=ios) this%rserv
             n_params_read = n_params_read + 1
           case default
-            print *, 'Parameter ',param,' not recognized in snow file'
+            print *, 'Parameter ',param,' not recognized in sac parameter file'
         end select
   
       end if
@@ -140,18 +114,19 @@ contains
     close(unit=51)
   
     ! quick check on completeness
-    if(n_params_read /= 26) then
-      print *, 'Read ', n_params_read , ' SNOW17 params, but need 26.  Quitting.'; stop
+    if(n_params_read /= 18) then
+      print *, 'Read ', n_params_read , ' Sac-SMA params, but need 18.  Quitting.'; stop
     end if
     
     ! calculate derived parameters
+
     this%total_area = 0.0
     do nh=1, runinfo%n_hrus
       this%total_area = this%total_area + this%hru_area(nh)
     end do
     
     return
-  end subroutine read_snow17_parameters
+  end subroutine read_sac_parameters
 
   ! ==== Open forcings files and read to start of first record
   SUBROUTINE init_forcing_files(namelist, runinfo, parameters)
@@ -167,13 +142,15 @@ contains
     integer        :: nh     ! loop counter
     
     ! local variables
-    integer				:: yr, mnth, dy, hr, found_start, ios, skipcount
-    real			    :: pcp, tav
+    integer			    :: yr, mnth, dy, hr, found_start, ios, skipcount
+    real			    :: pcp, tav, pet
 
     ! --- code ------------------------------------------------------------------
     print*, 'Initializing forcing files'
     found_start = 0
+    
     do nh=1, runinfo%n_hrus
+    
 
       ! make filename to read
       filename = trim(namelist%forcing_root) // trim(parameters%hru_id(nh)) // ".csv"
@@ -201,7 +178,7 @@ contains
       skipcount = 0
       do while(ios .ge. 0)
         ! forcing could have any format (not fixed width)
-        read (UNIT=runinfo%forcing_fileunits(nh), FMT=*, IOSTAT=ierr) yr, mnth, dy, hr, pcp, tav
+        read (UNIT=runinfo%forcing_fileunits(nh), FMT=*, IOSTAT=ierr) yr, mnth, dy, hr, pcp, tav, pet
 
         if(yr .eq. runinfo%start_year .and. mnth .eq. runinfo%start_month .and. dy .eq. runinfo%start_day .and. hr .eq. runinfo%start_hour) then
           found_start = found_start + 1
@@ -259,8 +236,8 @@ contains
     type (forcing_type),     intent(inout)   :: forcing
   
     ! local variables
-    integer				                     :: nh, ierr=0
-    integer				                     :: yr, mnth, dy, hr
+    integer		                     :: nh, ierr=0
+    integer		                     :: yr, mnth, dy, hr
     character(len=10)                        :: forcing_datehr
     
     !print*, "---"; print*, 'Current run datehr is ', runinfo%curr_datehr
@@ -269,7 +246,7 @@ contains
     do nh=1, runinfo%n_hrus
 
       ! read one record from already open files and check success
-      read (UNIT=runinfo%forcing_fileunits(nh), FMT=*, IOSTAT=ierr) yr, mnth, dy, hr, forcing%precip(nh), forcing%tair(nh)
+      read (UNIT=runinfo%forcing_fileunits(nh), FMT=*, IOSTAT=ierr) yr, mnth, dy, hr, forcing%precip(nh), forcing%tair(nh), forcing%pet(nh)
       if(ierr /= 0) then
         print*, 'ERROR:  failed to read forcing from file', trim(namelist%forcing_root) // trim(parameters%hru_id(nh))
         STOP
@@ -285,15 +262,10 @@ contains
       end if 
 
       ! update other forcing fields (derived)
-      ! NOTE: this is written now for a single temperature input (tair), but the standard for running snow17+sac is tmin/tmax
+      ! NOTE: this is written now for a single temperature input (tair), but the standard for running sac+sac is tmin/tmax
       !       we could return to the standard though a namelist option if needed
-      forcing%precip_scf(nh) = forcing%precip(nh) * parameters%scf(nh)   ! scale input precip by snow correction factor
-                                                                         ! (note: this is for output; model input 
-                                                                         ! precip is scaled in pack19()
-
-      call sfc_pressure(parameters%elev(nh), forcing%pa(nh))             ! fill in the surface pressure field                   
-                                                        
-    end do  ! end loop across snowbands (hrus)
+                                                             
+    end do  ! end loop across hrus
     
     return
   END subroutine read_areal_forcing  
@@ -322,7 +294,7 @@ contains
       write(*,'("Problem opening file ''", A, "''")') trim(filename)
       stop ":  ERROR EXIT"
     endif
-    write(runinfo%output_fileunits(1),'(A)') 'year mo dy hr tair precip precip*scf sneqv snowh raim '   ! header
+    write(runinfo%output_fileunits(1),'(A)') 'year mo dy hr tair precip pet qs qg tci '   ! header
 
     ! if user setting is to write out information for each snowband, open the individual files
     if (namelist%output_hrus == 1) then
@@ -340,7 +312,7 @@ contains
         endif
       
         ! Write 1-line header
-        write(runinfo%output_fileunits(nh+1),'(A)') 'year mo dy hr tair precip precip*scf sneqv snowh raim '
+        write(runinfo%output_fileunits(nh+1),'(A)') 'year mo dy hr tair precip pet qs qg tci '
         
       end do  ! end loop over sub-units
       
@@ -390,7 +362,7 @@ contains
   END SUBROUTINE init_new_state_files
   
   ! === write state information for one timestep ===
-  subroutine write_snow17_statefile(runinfo, namelist, modelvar, n_curr_hru)
+  subroutine write_sac_statefile(runinfo, namelist, modelvar, n_curr_hru)
     implicit none   
     type (namelist_type),    intent(in)     :: namelist
     type (runinfo_type),     intent(in)     :: runinfo
@@ -409,11 +381,11 @@ contains
     endif
     
     return
-  end subroutine write_snow17_statefile
+  end subroutine write_sac_statefile
   
 
   ! === read state information for one timestep before start of run ===
-  subroutine read_snow17_statefiles (modelvar, namelist, parameters, runinfo) 
+  subroutine read_sac_statefiles (modelvar, namelist, parameters, runinfo) 
     !use nrtype
     !use def_namelists, only: snow_state_in_root
     implicit none
@@ -449,9 +421,9 @@ contains
     do hru=1, runinfo%n_hrus
   
       ! make state filename
-      state_filename = trim(namelist%snow_state_in_root) // trim(parameters%hru_id(hru)) // '.txt'
+      state_filename = trim(namelist%sac_state_in_root) // trim(parameters%hru_id(hru)) // '.txt'
       open(unit=95,FILE=trim(state_filename), FORM='formatted', status='old')
-      !print*, ' -- reading snow state file: ', trim(state_filename)
+      !print*, ' -- reading sac state file: ', trim(state_filename)
   
       ! format for input is an unknown number of rows with 20 data columns (1 tprev, 19 for cs)
       !   the first column is the datestring; neg ios means end of file; pos means something wrong
@@ -477,19 +449,19 @@ contains
     
     ! check to make sure enough states on correct dates were found
     if (states_found /= runinfo%n_hrus) then 
-      print*, 'ERROR:  matching state not found in snow17 restart file.  Looking for state date: ', state_datehr
+      print*, 'ERROR:  matching state not found in sac restart file.  Looking for state date: ', state_datehr
       print*, '  -- last state read was on: ', statefile_datehr
       print*, 'Stopping.  Check inputs!'; stop
     endif
     
     return
   
-  end subroutine read_snow17_statefiles
+  end subroutine read_sac_statefiles
   
 
   ! === write output for one timestep ===
   ! assumes that files have been opened and header already written
-  SUBROUTINE write_snow17_output(namelist, runinfo, parameters, forcing, modelvar, n_curr_hru)
+  SUBROUTINE write_sac_output(namelist, runinfo, parameters, forcing, modelvar, n_curr_hru)
     implicit none
     type (namelist_type),    intent(in)     :: namelist
     type (runinfo_type),     intent(in)     :: runinfo
@@ -512,52 +484,52 @@ contains
     ! if user setting is to write out information for each snowband, open the individual files
     if (namelist%output_hrus == 1 .and. runinfo%n_hrus > 1) then
       write(runinfo%output_fileunits(n_curr_hru+1), 32, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
-            forcing%tair(n_curr_hru), forcing%precip(n_curr_hru), forcing%precip(n_curr_hru)*parameters%scf(n_curr_hru), &
-            modelvar%sneqv(n_curr_hru)*1000., modelvar%snowh(n_curr_hru), modelvar%raim(n_curr_hru)
+            forcing%tair(n_curr_hru), forcing%precip(n_curr_hru), forcing%pet(n_curr_hru), &
+            modelvar%qs(n_curr_hru), modelvar%qg(n_curr_hru), modelvar%tci(n_curr_hru)
       if(ierr /= 0) then
         print*, 'ERROR writing output information for basin average'; stop
       endif            
     end if  ! IF case for writing HRU-specific output to file (not including states)
 
-    ! ==== if all snowbands have been run, sum across snowbands with weighting for snowband area ====
+    ! ==== if all hrus have been run, sum across hrus with weighting for snowband area ====
     
     ! initialize for timestep
     forcing%tair_comb       = 0.0
     forcing%precip_comb     = 0.0
-    forcing%precip_scf_comb = 0.0
-    modelvar%sneqv_comb     = 0.0
-    modelvar%snowh_comb     = 0.0
-    modelvar%raim_comb      = 0.0
+    forcing%pet_comb        = 0.0
+    modelvar%qs_comb        = 0.0
+    modelvar%qg_comb        = 0.0
+    modelvar%tci_comb       = 0.0
         
     if (n_curr_hru .eq. runinfo%n_hrus) then 
       do nh=1, runinfo%n_hrus
         forcing%tair_comb        = forcing%tair_comb + forcing%tair(nh) * parameters%hru_area(nh)
         forcing%precip_comb      = forcing%precip_comb + forcing%precip(nh) * parameters%hru_area(nh)
-        forcing%precip_scf_comb  = forcing%precip_scf_comb + forcing%precip(nh) * parameters%hru_area(nh) * parameters%scf(nh)
-        modelvar%sneqv_comb      = modelvar%sneqv_comb + modelvar%sneqv(nh) * parameters%hru_area(nh) 
-        modelvar%snowh_comb      = modelvar%snowh_comb + modelvar%snowh(nh) * parameters%hru_area(nh) 
-        modelvar%raim_comb       = modelvar%raim_comb + modelvar%raim(nh) * parameters%hru_area(nh)
+        forcing%pet_comb         = forcing%pet_comb + forcing%pet(nh) * parameters%hru_area(nh)
+        modelvar%qs_comb         = modelvar%qs_comb + modelvar%qs(nh) * parameters%hru_area(nh) 
+        modelvar%qg_comb         = modelvar%qg_comb + modelvar%qg(nh) * parameters%hru_area(nh) 
+        modelvar%tci_comb        = modelvar%tci_comb + modelvar%tci(nh) * parameters%hru_area(nh)
       end do
 
       ! take average of weighted sum of HRU areas
       forcing%tair_comb        = forcing%tair_comb / parameters%total_area
       forcing%precip_comb      = forcing%precip_comb / parameters%total_area
-      forcing%precip_scf_comb  = forcing%precip_scf_comb / parameters%total_area
-      modelvar%sneqv_comb      = modelvar%sneqv_comb / parameters%total_area
-      modelvar%snowh_comb      = modelvar%snowh_comb / parameters%total_area
-      modelvar%raim_comb       = modelvar%raim_comb / parameters%total_area
+      forcing%pet_comb         = forcing%pet_comb / parameters%total_area
+      modelvar%qs_comb         = modelvar%qs_comb / parameters%total_area
+      modelvar%qg_comb         = modelvar%qg_comb / parameters%total_area
+      modelvar%tci_comb        = modelvar%tci_comb / parameters%total_area
 
       ! -- write out combined file that is similar to each area file, but add flow variable in CFS units
       write(runinfo%output_fileunits(1), 32, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
-            forcing%tair_comb, forcing%precip_comb, forcing%precip_scf_comb, &
-            modelvar%sneqv_comb*1000.0, modelvar%snowh_comb, modelvar%raim_comb
+            forcing%tair_comb, forcing%precip_comb, forcing%pet, &
+            modelvar%qs_comb, modelvar%qg_comb, modelvar%tci_comb
       if(ierr /= 0) then
         print*, 'ERROR writing output information for sub-unit ', n_curr_hru; stop
       endif
     endif 
 
     return
-  END SUBROUTINE write_snow17_output
+  END SUBROUTINE write_sac_output
 
   
 end module ioModule

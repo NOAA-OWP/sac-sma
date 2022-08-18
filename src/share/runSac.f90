@@ -11,13 +11,13 @@ module runModule
 
   implicit none
 
-  type, public :: snow17_type
+  type, public :: sac_type
     type(namelist_type)   :: namelist
     type(runinfo_type)    :: runinfo
     type(parameters_type) :: parameters
     type(forcing_type)    :: forcing
     type(modelvar_type)   :: modelvar
-  end type snow17_type
+  end type sac_type
 
 contains
 
@@ -26,7 +26,7 @@ contains
   SUBROUTINE initialize_from_file (model, config_file)
     implicit none
     
-    type(snow17_type), target, intent(out) :: model
+    type(sac_type), target, intent(out) :: model
     character(len=*), intent (in)          :: config_file ! namelist file from command line argument
     
     associate(namelist   => model%namelist,   &
@@ -46,7 +46,7 @@ contains
       call parameters%initParams(namelist)     ! read and/or initialize parameters
       
       ! read parameters from input file
-      call read_snow17_parameters(parameters, namelist%snow17_param_file, runinfo)
+      call read_sac_parameters(parameters, namelist%sac_param_file, runinfo)
         
       !---------------------------------------------------------------------
       ! Open the forcing file
@@ -64,7 +64,7 @@ contains
       ! we *ARE* warm-starting from a state file
       ! read in external state files and overwrites namelist state variables
       if(namelist%warm_start_run .eq. 1) then
-        call read_snow17_statefiles (modelvar, namelist, parameters, runinfo) 
+        call read_sac_statefiles (modelvar, namelist, parameters, runinfo) 
       endif
 #endif
 
@@ -95,12 +95,12 @@ contains
              
   ! == Move the model ahead one time step ================================================================
   SUBROUTINE advance_in_time(model)
-    type (snow17_type), intent (inout) :: model
+    type (sac_type), intent (inout) :: model
     
     !print*, 'current time: ', model%runinfo%curr_datehr
 
-    ! -- run snow17 for one time step
-    call solve_snow17(model)
+    ! -- run sac for one time step
+    call solve_sac(model)
 
     ! -- advance run time info
     model%runinfo%itime         = model%runinfo%itime + 1                            ! increment the integer time by 1
@@ -114,8 +114,8 @@ contains
   
 
   ! == Routing to run the model for one timestep and all spatial sub-units ================================
-  SUBROUTINE solve_snow17(model)
-    type (snow17_type), intent (inout) :: model
+  SUBROUTINE solve_sac(model)
+    type (sac_type), intent (inout) :: model
     
     ! local parameters
     integer            :: nh             ! counter for snowbands
@@ -135,33 +135,33 @@ contains
 #endif
 
       !---------------------------------------------------------------------
-      ! call the main snow17 state update routine in loop over spatial sub-units
+      ! call the main sac state update routine in loop over spatial sub-units
       !---------------------------------------------------------------------
       do nh=1, runinfo%n_hrus
 
-        call exsnow19(int(runinfo%dt), int(runinfo%dt/3600), runinfo%curr_dy, runinfo%curr_mo, runinfo%curr_yr, &
-    	  ! SNOW17 INPUT AND OUTPUT VARIABLES
-  	      forcing%precip(nh), forcing%tair(nh), modelvar%raim(nh), modelvar%sneqv(nh), modelvar%snow(nh), modelvar%snowh(nh), &
-    	  ! SNOW17 PARAMETERS
-          !ALAT,SCF,MFMAX,MFMIN,UADJ,SI,NMF,TIPM,MBASE,PXTEMP,PLWHC,DAYGM,ELEV,PA,ADC
-  	      parameters%latitude(nh), parameters%scf(nh), parameters%mfmax(nh), parameters%mfmin(nh), &
-          parameters%uadj(nh), parameters%si(nh), parameters%nmf(nh), parameters%tipm(nh), parameters%mbase(nh), &
-          parameters%pxtemp(nh), parameters%plwhc(nh), parameters%daygm(nh), parameters%elev(nh), forcing%pa(nh), &
-          parameters%adc(:,nh), &
-          ! SNOW17 CARRYOVER VARIABLES
+        call exsac(int(runinfo%dt), int(runinfo%dt/3600), runinfo%curr_dy, runinfo%curr_mo, runinfo%curr_yr, &
+    	  ! SAC INPUT AND OUTPUT VARIABLES
+  	      forcing%precip(nh), forcing%tair(nh), modelvar%pet(nh), modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), &
+    	  ! SAC PARAMETERS
+          !uztwm, uzfwm, lztwm, lzfpm, lzfsm, adimp, uzk, lzpk, lzsk, zperc, rexp, pctim, pfree, riva, side, rserv
+  	      parameters%uztwm(nh), parameters%uzfwm(nh), parameters%lztwm(nh), parameters%lzfpm(nh), &
+          parameters%lzfsm(nh), parameters%adimp(nh), parameters%uzk(nh), parameters%lzpk(nh), parameters%lzsk(nh), &
+          parameters%zperc(nh), parameters%rexp(nh), parameters%pctim(nh), parameters%pfree(nh), forcing%riva(nh), &
+          parametsrs%side(nh), parameters%rserv(nh), &
+          ! SAC CARRYOVER VARIABLES
   		  modelvar%cs(:,nh), modelvar%tprev(nh) )             
 
         !---------------------------------------------------------------------
         ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
         !---------------------------------------------------------------------
 #ifndef NGEN_OUTPUT_ACTIVE
-        call write_snow17_output(namelist, runinfo, parameters, forcing, modelvar, nh)
+        call write_sac_output(namelist, runinfo, parameters, forcing, modelvar, nh)
 #endif
         
-        ! === write out end-of-timestep values to STATE FILES for snow17 if requested in namelist ===
+        ! === write out end-of-timestep values to STATE FILES for sac if requested in namelist ===
 #ifndef NGEN_WRITE_RESTART_ACTIVE
         if(namelist%write_states .eq. 1) then
-          call write_snow17_statefile(runinfo, namelist, modelvar, nh)  
+          call write_sac_statefile(runinfo, namelist, modelvar, nh)  
         end if
 #endif        
     
@@ -169,13 +169,13 @@ contains
 
     end associate ! terminate associate block
     
-  END SUBROUTINE solve_snow17
+  END SUBROUTINE solve_sac
   
   
   !== Finalize the model ================================================================================
   SUBROUTINE cleanup(model)
     implicit none
-    type(snow17_type), intent(inout) :: model
+    type(sac_type), intent(inout) :: model
     
     ! local variables
     integer         :: nh

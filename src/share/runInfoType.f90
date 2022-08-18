@@ -10,7 +10,7 @@ save
 type, public :: runinfo_type
 
   ! time-space information about the model run
-  integer                             :: n_hrus		       ! number of HRU areas in parameter files
+  integer                             :: n_hrus	           ! number of HRU areas in parameter files
   character(len=10)                   :: start_datehr      ! Start date of the model run ( YYYYMMDDHH ) 
   character(len=10)                   :: end_datehr        ! End date of the model run ( YYYYMMDDHH ) 
   character(len=10)                   :: curr_datehr       ! Current date of the model run ( YYYYMMDDHH ) 
