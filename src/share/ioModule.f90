@@ -294,7 +294,7 @@ contains
       write(*,'("Problem opening file ''", A, "''")') trim(filename)
       stop ":  ERROR EXIT"
     endif
-    write(runinfo%output_fileunits(1),'(A)') 'year mo dy hr tair precip pet qs qg tci '   ! header
+    write(runinfo%output_fileunits(1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta'   ! header
 
     ! if user setting is to write out information for each snowband, open the individual files
     if (namelist%output_hrus == 1) then
@@ -312,7 +312,7 @@ contains
         endif
       
         ! Write 1-line header
-        write(runinfo%output_fileunits(nh+1),'(A)') 'year mo dy hr tair precip pet qs qg tci '
+        write(runinfo%output_fileunits(nh+1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta'
         
       end do  ! end loop over sub-units
       
@@ -502,6 +502,7 @@ contains
     modelvar%qs_comb        = 0.0
     modelvar%qg_comb        = 0.0
     modelvar%tci_comb       = 0.0
+    modelvar%eta_comb       = 0.0
         
     if (n_curr_hru .eq. runinfo%n_hrus) then 
       do nh=1, runinfo%n_hrus
@@ -511,6 +512,7 @@ contains
         modelvar%qs_comb         = modelvar%qs_comb + modelvar%qs(nh) * parameters%hru_area(nh) 
         modelvar%qg_comb         = modelvar%qg_comb + modelvar%qg(nh) * parameters%hru_area(nh) 
         modelvar%tci_comb        = modelvar%tci_comb + modelvar%tci(nh) * parameters%hru_area(nh)
+        modelvar%eta_comb        = modelvar%eta_comb + modelvar%eta(nh) * parameters%hru_area(nh)
       end do
 
       ! take average of weighted sum of HRU areas
@@ -520,11 +522,12 @@ contains
       modelvar%qs_comb         = modelvar%qs_comb / parameters%total_area
       modelvar%qg_comb         = modelvar%qg_comb / parameters%total_area
       modelvar%tci_comb        = modelvar%tci_comb / parameters%total_area
+      modelvar%eta_comb        = modelvar%eta_comb / parameters%total_area
 
       ! -- write out combined file that is similar to each area file, but add flow variable in CFS units
       write(runinfo%output_fileunits(1), 32, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
             forcing%tair_comb, forcing%precip_comb, forcing%pet, &
-            modelvar%qs_comb, modelvar%qg_comb, modelvar%tci_comb
+            modelvar%qs_comb, modelvar%qg_comb, modelvar%tci_comb, modelvar%eta_comb
       if(ierr /= 0) then
         print*, 'ERROR writing output information for sub-unit ', n_curr_hru; stop
       endif

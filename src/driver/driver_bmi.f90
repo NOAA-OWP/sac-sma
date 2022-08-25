@@ -72,8 +72,9 @@ program multi_driver
   
   ! loop through while current time <= end time (
   do while (current_time .le. end_time)
-    print*, 'Current time:', current_time
+   ! print*, 'Current time:', current_time
     status = m%update()                       ! run the model one time step
+print*, '2'
     status = m%get_current_time(current_time) ! update current_time
   end do
 

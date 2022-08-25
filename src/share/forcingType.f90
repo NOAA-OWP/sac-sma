@@ -34,11 +34,12 @@ contains
     allocate(this%tair       (n_hrus))
     allocate(this%precip     (n_hrus))
     allocate(this%pet        (n_hrus))
+
     
     ! -- default assignments
     this%precip(:)         = huge(1.0)
-    this%pet       (:)     = huge(1.0)
     this%tair(:)           = huge(1.0)
+    this%pet(:)            = huge(1.0)
     this%precip_comb       = 0.0
     this%tair_comb         = 0.0
     this%pet_comb          = 0.0

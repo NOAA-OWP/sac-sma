@@ -98,7 +98,7 @@ module bmi_sac_module
 
   ! Exchange items
   integer, parameter :: input_item_count = 3
-  integer, parameter :: output_item_count = 3
+  integer, parameter :: output_item_count = 4
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -159,6 +159,7 @@ contains
     output_items(1) = 'qs'      ! runoff from direct runoff, impervious runoff, surface runoff, and interflow (mm)
     output_items(2) = 'qg'      ! baseflow (mm)
     output_items(3) = 'tci'     ! total channel inflow from upstream (mm)
+    output_items(4) = 'eta'     ! actual evapotranspiration (mm) ??
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -170,9 +171,9 @@ contains
     character (len=*), intent(in) :: config_file
     integer :: bmi_status
 
-
     if (len(config_file) > 0) then
        call initialize_from_file(this%model, config_file)
+
     !else
        !call initialize_from_defaults(this%model)
      end if
@@ -297,7 +298,7 @@ contains
 
     select case(name)
     case('tair', 'precip', 'pet', &     ! input vars
-         'qs', 'qg', 'tci')             ! output vars
+         'qs', 'qg', 'tci', 'eta')      ! output vars
        grid = 0
        bmi_status = BMI_SUCCESS
     case default
@@ -568,7 +569,7 @@ contains
 
     select case(name)
     case('tair', 'precip', 'pet',  &     ! input vars
-         'qs', 'qg', 'tci')              ! output vars
+         'qs', 'qg', 'tci', 'eta')       ! output vars
        type = "real"
        bmi_status = BMI_SUCCESS
     case default
@@ -600,6 +601,9 @@ contains
        units = "mm"
        bmi_status = BMI_SUCCESS
     case("tci")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("eta")
        units = "mm"
        bmi_status = BMI_SUCCESS
     case default
@@ -634,6 +638,8 @@ contains
     case("tci")
        size = sizeof(this%model%modelvar%tci_comb)      ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
+    case("eta")
+       size = sizeof(this%model%modelvar%eta_comb)
     case default
        size = -1
        bmi_status = BMI_FAILURE
@@ -718,6 +724,9 @@ contains
        bmi_status = BMI_SUCCESS
     case("tci")
        dest(1) = this%model%modelvar%tci_comb
+       bmi_status = BMI_SUCCESS
+    case("eta")
+       dest(1) = this%model%modelvar%eta_comb
        bmi_status = BMI_SUCCESS
     case default
        dest(:) = -1.0
@@ -891,6 +900,9 @@ contains
        bmi_status = BMI_SUCCESS
     case("tci")
        this%model%modelvar%tci_comb = src(1)
+       bmi_status = BMI_SUCCESS
+    case("eta")
+       this%model%modelvar%eta_comb = src(1)
        bmi_status = BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE

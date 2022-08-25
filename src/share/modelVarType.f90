@@ -17,12 +17,13 @@ module modelVarType
     real, dimension(:), allocatable    :: qs     ! surface runoff from all sources (mm)    
     real, dimension(:), allocatable    :: qg     ! baseflow (mm)
     real, dimension(:), allocatable    :: tci    ! total channel inflow (mm)    
+    real, dimension(:), allocatable    :: eta  
 
     ! other states and carryover variables
     !real, dimension(:), allocatable    :: tprev
       
     ! areally-averaged variables for output 
-    real                               :: qs_comb, qg_comb, tci_comb
+    real                               :: qs_comb, qg_comb, tci_comb, eta_comb
   
     contains
 
@@ -50,7 +51,7 @@ module modelVarType
     allocate(this%qs    (1:namelist%n_hrus))
     allocate(this%qg    (1:namelist%n_hrus))
     allocate(this%tci   (1:namelist%n_hrus))
-    
+    allocate(this%eta   (1:namelist%n_hrus))    
 ! -- default assignmtents
     this%uztwc(:)      = 0.0
     this%uzfwc(:)      = 0.0 
@@ -61,7 +62,11 @@ module modelVarType
     this%qs(:)         = 0.0
     this%qg(:)         = 0.0
     this%tci(:)        = 0.0
-     
+    this%eta(:)        = 0.0
+    this%qs_comb       = 0.0
+    this%qg_comb       = 0.0
+    this%tci_comb      = 0.0 
+    this%eta_comb      = 0.0
 
   end subroutine initModelVar
 
