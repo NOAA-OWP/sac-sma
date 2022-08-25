@@ -46,6 +46,8 @@ program multi_driver
   !---------------------------------------------------------------------
   print*, "Initializing run ..."
   call get_command_argument(1, namelist_file, status=status)
+
+  print*, "Retrieved namelist file ... ", namelist_file
   !if( .not. ( present(namelist_file) ) ) then
   if( status /= 0 ) then
     namelist_file = "namelist.input"
@@ -60,7 +62,7 @@ program multi_driver
   status = m%get_current_time(current_time)
   status = m%get_end_time(end_time)
   status = m%get_time_step(dt)
-  
+
   ! create optional screen output for run times
   call unix_to_datehr(current_time, start_datehr) 
   call unix_to_datehr(end_time, end_datehr) 
@@ -70,7 +72,7 @@ program multi_driver
   
   ! loop through while current time <= end time (
   do while (current_time .le. end_time)
-    !print*, 'Current time:', current_time
+    print*, 'Current time:', current_time
     status = m%update()                       ! run the model one time step
     status = m%get_current_time(current_time) ! update current_time
   end do

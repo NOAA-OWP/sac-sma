@@ -343,7 +343,7 @@ contains
       do nh=1, runinfo%n_hrus
 
         ! make filename  
-        filename = trim(namelist%snow_state_out_root) // trim(parameters%hru_id(nh)) // '.txt'	
+        filename = trim(namelist%sac_state_out_root) // trim(parameters%hru_id(nh)) // '.txt'	
 
         ! Open the output files
         open(runinfo%state_fileunits(nh), file = trim(filename), form = 'formatted', action = 'write', status='replace', iostat = ierr)
@@ -375,7 +375,8 @@ contains
     ! write fixed-width format line of state file for current timesstep and sub-unit
     41 FORMAT(I0.4, 3(I0.2), 20(F20.12))    ! use maximum precision (for double)
     write(runinfo%state_fileunits(n_curr_hru), 41, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
-          modelvar%tprev(n_curr_hru), modelvar%cs(:,n_curr_hru)
+          modelvar%uztwc(n_curr_hru), modelvar%uzfwc(n_curr_hru), modelvar%lztwc(n_curr_hru), &
+          modelvar%lzfsc(n_curr_hru), modelvar%lzfpc(n_curr_hru), modelvar%adimc(n_curr_hru)
     if(ierr /= 0) then
       print*, 'ERROR writing state file information for sub-unit ', n_curr_hru; stop
     endif
@@ -434,7 +435,8 @@ contains
       ! read each row and check to see if the date matches the initial state date
       do while(ios .eq. 0)
   
-        read(95, *, IOSTAT=ios) statefile_datehr, modelvar%tprev(hru), modelvar%cs(:,hru)
+        read(95, *, IOSTAT=ios) statefile_datehr, modelvar%uztwc(hru), modelvar%uzfwc(hru), &
+            modelvar%lztwc(hru), modelvar%lzfsc(hru), modelvar%lzfpc(hru), modelvar%adimc(hru)
   
         ! checks either for real date or special keyword identifying the state to use
         !   this functionality facilitates ESP forecast initialization

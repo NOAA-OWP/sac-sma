@@ -158,7 +158,7 @@ contains
 
     output_items(1) = 'qs'      ! runoff from direct runoff, impervious runoff, surface runoff, and interflow (mm)
     output_items(2) = 'qg'      ! baseflow (mm)
-    output_items(3) = 'tci'     ! total channel inflow (mm)
+    output_items(3) = 'tci'     ! total channel inflow from upstream (mm)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -170,11 +170,13 @@ contains
     character (len=*), intent(in) :: config_file
     integer :: bmi_status
 
+
     if (len(config_file) > 0) then
        call initialize_from_file(this%model, config_file)
     !else
        !call initialize_from_defaults(this%model)
      end if
+
     bmi_status = BMI_SUCCESS
   end function sac_initialize
 

@@ -14,12 +14,15 @@ module modelVarType
     real, dimension(:), allocatable    :: lzfsc  ! Lower zone free secondary water storage content (mm)
     real, dimension(:), allocatable    :: lzfpc  ! Lower zone free primary water storage content (mm)
     real, dimension(:), allocatable    :: adimc  ! Additional impervious area content (mm)
-  
+    real, dimension(:), allocatable    :: qs     ! surface runoff from all sources (mm)    
+    real, dimension(:), allocatable    :: qg     ! baseflow (mm)
+    real, dimension(:), allocatable    :: tci    ! total channel inflow (mm)    
+
     ! other states and carryover variables
     !real, dimension(:), allocatable    :: tprev
       
     ! areally-averaged variables for output 
-    !real                               :: sneqv_comb, snowh_comb, raim_comb
+    real                               :: qs_comb, qg_comb, tci_comb
   
     contains
 
@@ -44,30 +47,21 @@ module modelVarType
     allocate(this%lzfsc (1:namelist%n_hrus))
     allocate(this%lzfpc (1:namelist%n_hrus))
     allocate(this%adimc (1:namelist%n_hrus))
-    !
-    !Reversed the row and column for this `cs' array such that
-    ! we can pass a slice of the array to other subroutines in
-    ! a contiguous memory. Otherwise, we will receive warnings
-    ! at runtime about creation of a temporary array. and the performance
-    ! is impaired. The reason is that
-    ! Fortran stores arrays as 'column major'. 
-    !
-    !!allocate(this%cs    (1:namelist%n_hrus, 1:19)) => runtime warnings
-    !
-    !allocate(this%cs    (1:19, 1:namelist%n_hrus))
+    allocate(this%qs    (1:namelist%n_hrus))
+    allocate(this%qg    (1:namelist%n_hrus))
+    allocate(this%tci   (1:namelist%n_hrus))
     
-    ! -- default assignments
+! -- default assignmtents
     this%uztwc(:)      = 0.0
     this%uzfwc(:)      = 0.0 
     this%lztwc(:)      = 0.0 
     this%lzfsc(:)      = 0.0 
     this%lzfpc(:)      = 0.0
     this%adimc(:)      = 0.0
+    this%qs(:)         = 0.0
+    this%qg(:)         = 0.0
+    this%tci(:)        = 0.0
      
-    !this%tprev(:)      = 0.0      ! prev. temp is needed
-    !this%cs(:,:)       = 0.0      ! prev. temp is needed
-    
-    ! -- estimate derived variables (if any)
 
   end subroutine initModelVar
 

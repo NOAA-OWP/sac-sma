@@ -12,7 +12,7 @@ type, public :: parameters_type
   ! Sac model params in the sac param file
   character(len = 20), dimension(:), allocatable :: hru_id     ! local hru ids for multiple hrus
   real, dimension(:), allocatable                :: hru_area   ! sq-km, needed for combination & routing conv.
-  real, dimension(:), allocatable                :: uztwm, uzfwm, lztwm, lzfsm, adimp
+  real, dimension(:), allocatable                :: uztwm, uzfwm, lztwm, lzfsm, lzfpm, adimp
   real, dimension(:), allocatable                :: uzk, lzpk, lzsk, zperc, rexp
   real, dimension(:), allocatable                :: pctim, pfree, riva, side, rserv
   ! derived vars
@@ -40,6 +40,7 @@ contains
     allocate(this%uzfwm(n_hrus))
     allocate(this%lztwm(n_hrus))
     allocate(this%lzfsm(n_hrus))
+    allocate(this%lzfpm(n_hrus))
     allocate(this%adimp(n_hrus))
     allocate(this%uzk(n_hrus))
     allocate(this%lzpk(n_hrus))

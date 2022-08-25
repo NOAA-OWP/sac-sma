@@ -141,15 +141,15 @@ contains
 
         call exsac(int(runinfo%dt), int(runinfo%dt/3600), runinfo%curr_dy, runinfo%curr_mo, runinfo%curr_yr, &
     	  ! SAC INPUT AND OUTPUT VARIABLES
-  	      forcing%precip(nh), forcing%tair(nh), modelvar%pet(nh), modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), &
+  	      forcing%precip(nh), forcing%tair(nh), forcing%pet(nh), modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), &
     	  ! SAC PARAMETERS
           !uztwm, uzfwm, lztwm, lzfpm, lzfsm, adimp, uzk, lzpk, lzsk, zperc, rexp, pctim, pfree, riva, side, rserv
   	      parameters%uztwm(nh), parameters%uzfwm(nh), parameters%lztwm(nh), parameters%lzfpm(nh), &
           parameters%lzfsm(nh), parameters%adimp(nh), parameters%uzk(nh), parameters%lzpk(nh), parameters%lzsk(nh), &
-          parameters%zperc(nh), parameters%rexp(nh), parameters%pctim(nh), parameters%pfree(nh), forcing%riva(nh), &
-          parametsrs%side(nh), parameters%rserv(nh), &
+          parameters%zperc(nh), parameters%rexp(nh), parameters%pctim(nh), parameters%pfree(nh), parameters%riva(nh), &
+          parameters%side(nh), parameters%rserv(nh) ) !, &
           ! SAC CARRYOVER VARIABLES
-  		  modelvar%cs(:,nh), modelvar%tprev(nh) )             
+!  		  modelvar%cs(:,nh), modelvar%tprev(nh) )             
 
         !---------------------------------------------------------------------
         ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
