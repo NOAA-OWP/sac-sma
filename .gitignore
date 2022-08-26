@@ -75,3 +75,11 @@ bower_components/
 .grunt/
 src/vendor/
 dist/
+
+
+# temp or dev files #
+*.tmplnk
+*.tmp
+NOTES
+LASTNEXT
+*.ipynb*
