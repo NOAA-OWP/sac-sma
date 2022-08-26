@@ -11,7 +11,7 @@ C     SAC OUTPUTS
 C      IMPLICIT NONE
 
 C     RCS Id string, for version control
-      CHARACTER*60 RCSID
+c      CHARACTER*60 RCSID
 C      DATA RCSID/"$Id: ex_sac1.f,v 1.1 2006/09/01 21:59:43 vicadmin Exp $"/
 
 

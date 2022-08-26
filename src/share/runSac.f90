@@ -97,21 +97,15 @@ contains
   SUBROUTINE advance_in_time(model)
     type (sac_type), intent (inout) :: model
     
-print*, 'advance 1'
-    !print*, 'current time: ', model%runinfo%curr_datehr
-
     ! -- run sac for one time step
     call solve_sac(model)
-print*, 'advance 2'
     ! -- advance run time info
     model%runinfo%itime         = model%runinfo%itime + 1                            ! increment the integer time by 1
-print*, 'advance 3'
     !model%runinfo%time_dbl     = dble(model%runinfo%time_dbl + model%runinfo%dt)    ! increment relative model run time in seconds by DT
     model%runinfo%curr_datetime = model%runinfo%curr_datetime + model%runinfo%dt     ! increment unix model run time in seconds by DT
-print*, 'advance 4'
     call unix_to_datehr (model%runinfo%curr_datetime, model%runinfo%curr_datehr)     ! update datehr field as well
-print*, 'advance 5'
-    call unix_to_date_elem (model%runinfo%curr_datetime, model%runinfo%curr_yr, model%runinfo%curr_mo, model%runinfo%curr_dy, &
+    call unix_to_date_elem (model%runinfo%curr_datetime, &
+                            model%runinfo%curr_yr, model%runinfo%curr_mo, model%runinfo%curr_dy, &
                             model%runinfo%curr_hr, model%runinfo%curr_min, model%runinfo%curr_sec)
     
   END SUBROUTINE advance_in_time
@@ -129,7 +123,6 @@ print*, 'advance 5'
               parameters => model%parameters, &
               forcing    => model%forcing,    &
               modelvar   => model%modelvar)
-print*, 'solve 2'    
       !---------------------------------------------------------------------
       ! Read in the forcing data if NGEN_FORCING_ACTIVE is not defined
       !   will read current timestep forcing for all snowbands
@@ -138,19 +131,16 @@ print*, 'solve 2'
       call read_areal_forcing(namelist, parameters, runinfo, forcing)
 #endif
 
-print*, 'solve 3'
       !---------------------------------------------------------------------
       ! call the main sac state update routine in loop over spatial sub-units
       !---------------------------------------------------------------------
       do nh=1, runinfo%n_hrus
-print*, 'solve 4, nh= '
-print*, nh
-        call exsac( 1, &                     !NSOLD, which isn't used
-                    int(runinfo%dt/3600), &  !DTM, the timestep in seconds
-                    ! Focing inputs
-                    forcing%precip(nh), &    !liquid water input (mm)
-                    forcing%tair(nh), &      !average air temperature (C)
-                    forcing%pet(nh), &       !potential evapotranspiration (mm)
+        call exsac( 1, &                     ! NSOLD, which isn't used
+                    real(runinfo%dt), &      ! DTM, the timestep in seconds
+                    ! Forcing inputs
+                    forcing%precip(nh), &    ! liquid water input (mm)
+                    forcing%tair(nh), &      ! average air temperature (C)
+                    forcing%pet(nh), &       ! potential evapotranspiration (mm)
                     ! Sac parameters
                     parameters%uztwm(nh), parameters%uzfwm(nh), parameters%uzk(nh), &
                     parameters%pctim(nh), parameters%adimp(nh), parameters%riva(nh), &
@@ -158,25 +148,24 @@ print*, nh
                     parameters%lzfsm(nh), parameters%lzfpm(nh), parameters%lzsk(nh), &
                     parameters%lzpk(nh), parameters%pfree(nh), parameters%side(nh), &
                     parameters%rserv(nh), &
+                    ! Sac state variables
+                    modelvar%uztwc(nh), modelvar%uzfwc(nh), modelvar%lzfsc(nh), &
+                    modelvar%lzfsc(nh), modelvar%lzfpc(nh), modelvar%adimc(nh), &
                     ! Sac Outputs
                     modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), modelvar%eta(nh) )   
-                 
-                               
-print*, 'solve 5, nh = ', nh
+                                                   
         !---------------------------------------------------------------------
         ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
         !---------------------------------------------------------------------
 #ifndef NGEN_OUTPUT_ACTIVE
         call write_sac_output(namelist, runinfo, parameters, forcing, modelvar, nh)
 #endif
-print*, 'solve 6, nh = ', nh
         ! === write out end-of-timestep values to STATE FILES for sac if requested in namelist ===
 #ifndef NGEN_WRITE_RESTART_ACTIVE
         if(namelist%write_states .eq. 1) then
           call write_sac_statefile(runinfo, namelist, modelvar, nh)  
         end if
 #endif        
-print*, 'solve 7, nh= ', nh
       end do  ! end of spatial sub-unit (snowband) loop
 
     end associate ! terminate associate block

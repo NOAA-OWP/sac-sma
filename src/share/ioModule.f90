@@ -303,7 +303,6 @@ contains
         ! make filename to read
         filename = trim(namelist%output_root) // trim(parameters%hru_id(nh)) // '.txt'	
 
-        write(*,*) "open fileunit: ", nh+1
         ! Open the output files
         open(runinfo%output_fileunits(nh+1), file = trim(filename), form = 'formatted', action = 'write', status='replace', iostat = ierr)
         if (ierr /= 0) then
