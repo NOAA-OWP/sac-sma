@@ -12,7 +12,7 @@ C     SAC State variables  ',
 C      IMPLICIT NONE
 
 C.......................................
-C     THIS SUBROUTINE EXECUTES THE 'SAC-SMA ' OPERATION FOR ONE TIME
+C     THIS SUBROUTINE EXECUTES THE 'SAC-SMA ' OPERATION FOR ONE TIME 
 C         PERIOD.
 C.......................................
 C     SUBROUTINE INITIALLY WRITTEN BY. . .
@@ -20,8 +20,8 @@ C            ERIC ANDERSON - HRL     APRIL 1979     VERSION 1
 C.......................................
 
 C     RCS Id string, for version control
-      CHARACTER*60 RCSID
-      DATA RCSID/"$Id: sac1.f,v 1.1 2006/09/01 21:59:44 vicadmin Exp $"/
+c      CHARACTER*60 RCSID
+c      DATA RCSID/"$Id: sac1.f,v 1.1 2006/09/01 21:59:44 vicadmin Exp $"/
 
       REAL DT
       REAL PXV
@@ -146,9 +146,7 @@ C     INITIALIZE TIME INTERVAL SUMS.
       SDRO=0.0
       SPBF=0.0
 
-C
-C     DETERMINE COMPUTATIONAL TIME INCREMENTS FOR THE BASIC TIME
-C     INTERVAL
+C     DETERMINE COMPUTATIONAL TIME INCREMENTS FOR THE BASIC TIME INTERVAL
       NINC=1.0+0.2*(UZFWC+TWX)
 C     NINC=NUMBER OF TIME INCREMENTS THAT THE TIME INTERVAL
 C     IS DIVIDED INTO FOR FURTHER

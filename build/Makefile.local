@@ -45,15 +45,15 @@ endif
 
 # --- Define flags
 ifeq "$(FC)" "gfortran"
-  FLAGS_DEBUG = -static -Wall -g -ffree-line-length-none -cpp -fcheck=all
+  FLAGS_DEBUG  = -static -Wall -g -ffree-line-length-none -cpp -fcheck=all
+  FLAGS_DEBUG77 = -static -std=legacy -Wall -g -ffree-line-length-none -cpp -fcheck=all
   FLAGS = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
-  FLAGS2 = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
+  FLAGS77 = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
 endif
 
 ifeq "$(FC)" "ifort"
   FLAGS_PROF = -static -debug -warn all -check all -FR -O0 -auto -WB -traceback -g -fltconsistency -fpe0
   FLAGS = -O3 -warn all -check all
-  FLAGS2 = -O3 
   FLAGS77 = -O3 -f77rtl 
 endif
 
@@ -61,7 +61,7 @@ ifeq "$(FC)" "pgf90"
   FLAGS_PROF = -Bstatic -Mbackslash -g -Mchkptr -Mchkstk -Mpgicoff -Minform=inform -Ktrap=divz,inv -Mprof=lines,time
   # FLAGS = -Mfreeform -O3 -Mbackslash -g -Mchkptr -Mchkstk -Mpgicoff -Minform=inform -Ktrap=divz,inv
   FLAGS = -O3 -r8 -Kieee
-  FLAGS2 = -O3 -r8
+  FLAGS77 = -O3 -r8
 endif
 
 
@@ -120,12 +120,12 @@ check:
 
 # compile model code
 model:
-	$(FC) $(FLAGS2) -c $(model) $(INC)
-	$(FC) $(FLAGS) -c $(run_code) $(bmi) $(sac_drv) $(INC)
+	$(FC) $(FLAGS77) -c $(model_sac) $(INC)
+	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
 
 model_debug:
-	$(FC) $(FLAGS2) -g -fcheck=all -c $(model) $(INC)
-	$(FC) $(FLAGS) -g -fcheck=all -c $(run_code) $(bmi) $(sac_drv) $(INC)
+	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(INC)
+	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
 
 # link routines
 link:
