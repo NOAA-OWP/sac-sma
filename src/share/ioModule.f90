@@ -353,7 +353,7 @@ contains
       
         ! Write 1-line header
         write(runinfo%state_fileunits(nh),'(A)') &
-         'datehr tprev cs1 cs2 cs3 cs4 cs5 cs6 cs7 cs8cs9 cs10 cs11 cs12 cs13 cs14 cs15 cs16 cs17 cs18 cs19'
+         'datehr        uztwc    uzfwc   lztwc   lzfsc   lzfpc    adimc'
   
       end do  ! end loop over sub-units
     end if   
@@ -486,7 +486,7 @@ contains
     if (namelist%output_hrus == 1 .and. runinfo%n_hrus > 1) then
       write(runinfo%output_fileunits(n_curr_hru+1), 32, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
             forcing%tair(n_curr_hru), forcing%precip(n_curr_hru), forcing%pet(n_curr_hru), &
-            modelvar%qs(n_curr_hru), modelvar%qg(n_curr_hru), modelvar%tci(n_curr_hru)
+            modelvar%qs(n_curr_hru), modelvar%qg(n_curr_hru), modelvar%tci(n_curr_hru), modelvar%eta(n_curr_hru)
       if(ierr /= 0) then
         print*, 'ERROR writing output information for basin average'; stop
       endif            
@@ -525,7 +525,7 @@ contains
 
       ! -- write out combined file that is similar to each area file, but add flow variable in CFS units
       write(runinfo%output_fileunits(1), 32, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
-            forcing%tair_comb, forcing%precip_comb, forcing%pet, &
+            forcing%tair_comb, forcing%precip_comb, forcing%pet_comb, &
             modelvar%qs_comb, modelvar%qg_comb, modelvar%tci_comb, modelvar%eta_comb
       if(ierr /= 0) then
         print*, 'ERROR writing output information for sub-unit ', n_curr_hru; stop

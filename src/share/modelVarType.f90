@@ -17,7 +17,7 @@ module modelVarType
     real, dimension(:), allocatable    :: qs     ! surface runoff from all sources (mm)    
     real, dimension(:), allocatable    :: qg     ! baseflow (mm)
     real, dimension(:), allocatable    :: tci    ! total channel inflow (mm)    
-    real, dimension(:), allocatable    :: eta  
+    real, dimension(:), allocatable    :: eta    ! actual evapotranspiration (mm) 
 
     ! other states and carryover variables
     !real, dimension(:), allocatable    :: tprev
