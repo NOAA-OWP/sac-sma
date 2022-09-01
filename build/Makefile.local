@@ -87,6 +87,7 @@ run_util = \
         dateTimeUtilsModule.f90 \
         runInfoType.f90 \
         modelVarType.f90 \
+        derivedType.f90\
         ioModule.f90 \
         runSac.f90 
 

@@ -8,6 +8,7 @@ module runModule
   use runInfoType
   use forcingType
   use modelVarType
+  use derivedType
 
   implicit none
 
@@ -17,6 +18,7 @@ module runModule
     type(parameters_type) :: parameters
     type(forcing_type)    :: forcing
     type(modelvar_type)   :: modelvar
+    type(derived_type)    :: derived
   end type sac_type
 
 contains
@@ -33,7 +35,8 @@ contains
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
               forcing    => model%forcing,    &
-              modelvar   => model%modelvar)
+              modelvar   => model%modelvar,   &
+              derived    => model%derived)
               
       !-----------------------------------------------------------------------------------------
       !  read namelist, initialize data structures and read parameters
@@ -44,6 +47,7 @@ contains
       call forcing%initForcing(namelist)       ! initialize forcing data type/structure
       call modelvar%initModelVar(namelist)     ! initialize model states (incl. restarts)
       call parameters%initParams(namelist)     ! read and/or initialize parameters
+      call derived%initDerived(namelist)       ! initialize derived values
       
       ! read parameters from input file
       call read_sac_parameters(parameters, namelist%sac_param_file, runinfo)
@@ -122,7 +126,8 @@ contains
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
               forcing    => model%forcing,    &
-              modelvar   => model%modelvar)
+              modelvar   => model%modelvar,   &
+              derived    => model%derived)
       !---------------------------------------------------------------------
       ! Read in the forcing data if NGEN_FORCING_ACTIVE is not defined
       !   will read current timestep forcing for all snowbands
@@ -152,13 +157,15 @@ contains
                     modelvar%uztwc(nh), modelvar%uzfwc(nh), modelvar%lzfsc(nh), &
                     modelvar%lzfsc(nh), modelvar%lzfpc(nh), modelvar%adimc(nh), &
                     ! Sac Outputs
-                    modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), modelvar%eta(nh) )   
+                    modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), modelvar%eta(nh), &
+                    modelvar%roimp(nh), modelvar%sdro(nh), modelvar%ssur(nh), &
+                    modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh) )   
                                                    
         !---------------------------------------------------------------------
         ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
         !---------------------------------------------------------------------
 #ifndef NGEN_OUTPUT_ACTIVE
-        call write_sac_output(namelist, runinfo, parameters, forcing, modelvar, nh)
+        call write_sac_output(namelist, runinfo, parameters, forcing, modelvar, derived, nh)
 #endif
         ! === write out end-of-timestep values to STATE FILES for sac if requested in namelist ===
 #ifndef NGEN_WRITE_RESTART_ACTIVE

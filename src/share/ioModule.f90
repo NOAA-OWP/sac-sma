@@ -5,6 +5,7 @@ module ioModule
   use runInfoType
   use forcingType
   use modelVarType
+  use derivedType
   
   implicit none
   
@@ -435,7 +436,8 @@ contains
       do while(ios .eq. 0)
   
         read(95, *, IOSTAT=ios) statefile_datehr, modelvar%uztwc(hru), modelvar%uzfwc(hru), &
-            modelvar%lztwc(hru), modelvar%lzfsc(hru), modelvar%lzfpc(hru), modelvar%adimc(hru)
+            modelvar%lztwc(hru), modelvar%lzfsc(hru), modelvar%lzfpc(hru), modelvar%adimc(hru), &
+            modelvar%eta(hru)
   
         ! checks either for real date or special keyword identifying the state to use
         !   this functionality facilitates ESP forecast initialization
@@ -462,7 +464,7 @@ contains
 
   ! === write output for one timestep ===
   ! assumes that files have been opened and header already written
-  SUBROUTINE write_sac_output(namelist, runinfo, parameters, forcing, modelvar, n_curr_hru)
+  SUBROUTINE write_sac_output(namelist, runinfo, parameters, forcing, modelvar, derived, n_curr_hru)
     implicit none
     type (namelist_type),    intent(in)     :: namelist
     type (runinfo_type),     intent(in)     :: runinfo
@@ -472,6 +474,7 @@ contains
     ! forcing & modelvar are because the combined variables get updated here
     type (forcing_type),     intent(inout)  :: forcing
     type (modelvar_type),    intent(inout)  :: modelvar
+    type (derived_type),     intent(inout)  :: derived
     
     ! local variables
     integer        :: ierr   ! error code returned by open(iostat = ierr)
@@ -495,38 +498,56 @@ contains
     ! ==== if all hrus have been run, sum across hrus with weighting for snowband area ====
     
     ! initialize for timestep
-    forcing%tair_comb       = 0.0
-    forcing%precip_comb     = 0.0
-    forcing%pet_comb        = 0.0
-    modelvar%qs_comb        = 0.0
-    modelvar%qg_comb        = 0.0
-    modelvar%tci_comb       = 0.0
-    modelvar%eta_comb       = 0.0
+    derived%tair_comb       = 0.0
+    derived%precip_comb     = 0.0
+    derived%pet_comb        = 0.0
+    derived%qs_comb        = 0.0
+    derived%qg_comb        = 0.0
+    derived%tci_comb       = 0.0
+    derived%eta_comb       = 0.0
+    derived%roimp_comb     = 0.0
+    derived%sdro_comb      = 0.0
+    derived%ssur_comb      = 0.0
+    derived%sif_comb       = 0.0
+    derived%bfs_comb       = 0.0
+    derived%bfp_comb       = 0.0
         
     if (n_curr_hru .eq. runinfo%n_hrus) then 
       do nh=1, runinfo%n_hrus
-        forcing%tair_comb        = forcing%tair_comb + forcing%tair(nh) * parameters%hru_area(nh)
-        forcing%precip_comb      = forcing%precip_comb + forcing%precip(nh) * parameters%hru_area(nh)
-        forcing%pet_comb         = forcing%pet_comb + forcing%pet(nh) * parameters%hru_area(nh)
-        modelvar%qs_comb         = modelvar%qs_comb + modelvar%qs(nh) * parameters%hru_area(nh) 
-        modelvar%qg_comb         = modelvar%qg_comb + modelvar%qg(nh) * parameters%hru_area(nh) 
-        modelvar%tci_comb        = modelvar%tci_comb + modelvar%tci(nh) * parameters%hru_area(nh)
-        modelvar%eta_comb        = modelvar%eta_comb + modelvar%eta(nh) * parameters%hru_area(nh)
+        derived%tair_comb        = derived%tair_comb + forcing%tair(nh) * parameters%hru_area(nh)
+        derived%precip_comb      = derived%precip_comb + forcing%precip(nh) * parameters%hru_area(nh)
+        derived%pet_comb         = derived%pet_comb + forcing%pet(nh) * parameters%hru_area(nh)
+        derived%qs_comb          = derived%qs_comb + modelvar%qs(nh) * parameters%hru_area(nh) 
+        derived%qg_comb          = derived%qg_comb + modelvar%qg(nh) * parameters%hru_area(nh) 
+        derived%tci_comb         = derived%tci_comb + modelvar%tci(nh) * parameters%hru_area(nh)
+        derived%eta_comb         = derived%eta_comb + modelvar%eta(nh) * parameters%hru_area(nh)
+        derived%roimp_comb       = derived%roimp_comb + modelvar%roimp(nh) * parameters%hru_area(nh)
+        derived%sdro_comb        = derived%sdro_comb  + modelvar%sdro(nh) * parameters%hru_area(nh)
+        derived%ssur_comb        = derived%ssur_comb  + modelvar%ssur(nh) * parameters%hru_area(nh)
+        derived%sif_comb         = derived%sif_comb + modelvar%sif(nh) * parameters%hru_area(nh)
+        derived%bfs_comb         = derived%bfs_comb + modelvar%bfs(nh) * parameters%hru_area(nh)
+        derived%bfp_comb         = derived%bfp_comb + modelvar%bfp(nh) * parameters%hru_area(nh)
       end do
 
       ! take average of weighted sum of HRU areas
-      forcing%tair_comb        = forcing%tair_comb / parameters%total_area
-      forcing%precip_comb      = forcing%precip_comb / parameters%total_area
-      forcing%pet_comb         = forcing%pet_comb / parameters%total_area
-      modelvar%qs_comb         = modelvar%qs_comb / parameters%total_area
-      modelvar%qg_comb         = modelvar%qg_comb / parameters%total_area
-      modelvar%tci_comb        = modelvar%tci_comb / parameters%total_area
-      modelvar%eta_comb        = modelvar%eta_comb / parameters%total_area
+      derived%tair_comb        = derived%tair_comb / parameters%total_area
+      derived%precip_comb      = derived%precip_comb / parameters%total_area
+      derived%pet_comb         = derived%pet_comb / parameters%total_area
+      derived%qs_comb          = derived%qs_comb / parameters%total_area
+      derived%qg_comb          = derived%qg_comb / parameters%total_area
+      derived%tci_comb         = derived%tci_comb / parameters%total_area
+      derived%eta_comb         = derived%eta_comb / parameters%total_area
+      derived%roimp_comb       = derived%roimp_comb / parameters%total_area
+      derived%sdro_comb        = derived%sdro_comb / parameters%total_area
+      derived%ssur_comb        = derived%ssur_comb / parameters%total_area
+      derived%sif_comb         = derived%sif_comb / parameters%total_area
+      derived%bfs_comb         = derived%bfs_comb / parameters%total_area
+      derived%bfp_comb         = derived%bfp_comb / parameters%total_area
 
       ! -- write out combined file that is similar to each area file, but add flow variable in CFS units
       write(runinfo%output_fileunits(1), 32, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
-            forcing%tair_comb, forcing%precip_comb, forcing%pet_comb, &
-            modelvar%qs_comb, modelvar%qg_comb, modelvar%tci_comb, modelvar%eta_comb
+            derived%tair_comb, derived%precip_comb, derived%pet_comb, &
+            derived%qs_comb, derived%qg_comb, derived%tci_comb, derived%eta_comb
       if(ierr /= 0) then
         print*, 'ERROR writing output information for sub-unit ', n_curr_hru; stop
       endif

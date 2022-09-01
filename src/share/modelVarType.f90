@@ -18,13 +18,14 @@ module modelVarType
     real, dimension(:), allocatable    :: qg     ! baseflow (mm)
     real, dimension(:), allocatable    :: tci    ! total channel inflow (mm)    
     real, dimension(:), allocatable    :: eta    ! actual evapotranspiration (mm) 
+    real, dimension(:), allocatable    :: roimp  ! impervious area runoff (mm)
+    real, dimension(:), allocatable    :: sdro   ! direct runoff (mm)
+    real, dimension(:), allocatable    :: ssur   ! surface runoff (mm)
+    real, dimension(:), allocatable    :: sif    ! interflow (mm)
+    real, dimension(:), allocatable    :: bfs    ! non-channel baseflow component (mm)
+    real, dimension(:), allocatable    :: bfp    ! baseflow component (mm)
 
-    ! other states and carryover variables
-    !real, dimension(:), allocatable    :: tprev
-      
-    ! areally-averaged variables for output 
-    real                               :: qs_comb, qg_comb, tci_comb, eta_comb
-  
+            
     contains
 
       procedure, public  :: initModelVar
@@ -51,7 +52,13 @@ module modelVarType
     allocate(this%qs    (1:namelist%n_hrus))
     allocate(this%qg    (1:namelist%n_hrus))
     allocate(this%tci   (1:namelist%n_hrus))
-    allocate(this%eta   (1:namelist%n_hrus))    
+    allocate(this%eta   (1:namelist%n_hrus)) 
+    allocate(this%roimp (1:namelist%n_hrus))
+    allocate(this%sdro  (1:namelist%n_hrus))
+    allocate(this%ssur  (1:namelist%n_hrus))
+    allocate(this%sif   (1:namelist%n_hrus))
+    allocate(this%bfs   (1:namelist%n_hrus))
+    allocate(this%bfp   (1:namelist%n_hrus))   
 ! -- default assignmtents
     this%uztwc(:)      = 0.0
     this%uzfwc(:)      = 0.0 
@@ -63,11 +70,13 @@ module modelVarType
     this%qg(:)         = 0.0
     this%tci(:)        = 0.0
     this%eta(:)        = 0.0
-    this%qs_comb       = 0.0
-    this%qg_comb       = 0.0
-    this%tci_comb      = 0.0 
-    this%eta_comb      = 0.0
-
+    this%roimp(:)      = 0.0
+    this%sdro(:)       = 0.0
+    this%ssur(:)       = 0.0
+    this%sif(:)        = 0.0
+    this%bfs(:)        = 0.0
+    this%bfp(:)        = 0.0
+   
   end subroutine initModelVar
 
 end module modelVarType

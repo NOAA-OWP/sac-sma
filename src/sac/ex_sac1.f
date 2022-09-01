@@ -6,7 +6,8 @@ C     SAC PARAMETERS
 C     SAC State variables  ',
      &                 UZTWC,UZFWC,LZTWC,LZFSC,LZFPC,ADIMC,
 C     SAC OUTPUTS
-     &                 QS,QG,Q,ETA)
+     &                 QS,QG,Q,ETA
+     &                 ROIMP,SDRO,SSUR,SIF,BFS,BFP)
 
 C      IMPLICIT NONE
 

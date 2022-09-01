@@ -12,7 +12,6 @@ type, public :: forcing_type
   real, dimension(:), allocatable   :: tair       ! surface air temperature [K]
   real, dimension(:), allocatable   :: precip     ! total input precipitation [mm/s]
   real, dimension(:), allocatable   :: pet        ! potential evapotranspiration [mm]
-  real                              :: precip_comb, pet_comb, tair_comb    ! areally averaged forcings across HRUs
 
   contains
 
@@ -40,9 +39,6 @@ contains
     this%precip(:)         = huge(1.0)
     this%tair(:)           = huge(1.0)
     this%pet(:)            = huge(1.0)
-    this%precip_comb       = 0.0
-    this%tair_comb         = 0.0
-    this%pet_comb          = 0.0
     
   end subroutine initForcing
   
