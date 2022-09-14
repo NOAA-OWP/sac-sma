@@ -12,7 +12,7 @@ module derivedType
     real                               :: roimp_comb, sdro_comb, ssur_comb
     real                               :: sif_comb, bfs_comb, bfp_comb
     real                               :: precip_comb, tair_comb, pet_comb
-  
+     
     contains
 
       procedure, public  :: initDerived

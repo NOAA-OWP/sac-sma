@@ -98,7 +98,7 @@ module bmi_sac_module
 
   ! Exchange items
   integer, parameter :: input_item_count = 3
-  integer, parameter :: output_item_count = 4
+  integer, parameter :: output_item_count = 10
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -159,7 +159,13 @@ contains
     output_items(1) = 'qs'      ! runoff from direct runoff, impervious runoff, surface runoff, and interflow (mm)
     output_items(2) = 'qg'      ! baseflow (mm)
     output_items(3) = 'tci'     ! total channel inflow from upstream (mm)
-    output_items(4) = 'eta'     ! actual evapotranspiration (mm) ??
+    output_items(4) = 'eta'     ! actual evapotranspiration (mm) 
+    output_items(5) = 'roimp'  ! impervious area runoff (mm)
+    output_items(6) = 'sdro'   ! direct runoff (mm)
+    output_items(7) = 'ssur'   ! surface runoff (mm)
+    output_items(8) = 'sif'    ! interflow (mm)
+    output_items(9) = 'bfs'    ! non-channel baseflow component (mm)
+    output_items(10) = 'bfp'    ! baseflow component (mm)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -297,8 +303,9 @@ contains
     integer :: bmi_status
 
     select case(name)
-    case('tair', 'precip', 'pet', &     ! input vars
-         'qs', 'qg', 'tci', 'eta')      ! output vars
+    case('tair', 'precip', 'pet', &                  ! input vars
+         'qs', 'qg', 'tci', 'eta',  &                ! output vars
+         'roimp','sdro','ssur','sif','bfs','bfp')
        grid = 0
        bmi_status = BMI_SUCCESS
     case default
@@ -568,8 +575,9 @@ contains
     integer :: bmi_status
 
     select case(name)
-    case('tair', 'precip', 'pet',  &     ! input vars
-         'qs', 'qg', 'tci', 'eta')       ! output vars
+    case('tair', 'precip', 'pet',  &                ! input vars
+         'qs', 'qg', 'tci', 'eta', &                ! output vars
+         'roimp','sdro','ssur','sif','bfs','bfp')
        type = "real"
        bmi_status = BMI_SUCCESS
     case default
@@ -606,6 +614,42 @@ contains
     case("eta")
        units = "mm"
        bmi_status = BMI_SUCCESS
+    case("uztwc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("uzfwc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lztwc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lzfsc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lzfpc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("adimc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("roimp")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("sdro")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("ssur")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("sif")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("bfs")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("bfp")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
     case default
        units = "-"
        bmi_status = BMI_FAILURE
@@ -640,18 +684,25 @@ contains
        bmi_status = BMI_SUCCESS
     case("eta")
        size = sizeof(this%model%derived%eta_comb)
+       bmi_status = BMI_SUCCESS
     case("roimp")
        size = sizeof(this%model%derived%roimp_comb)
+       bmi_status = BMI_SUCCESS
     case("sdro")
        size = sizeof(this%model%derived%sdro_comb)
+       bmi_status = BMI_SUCCESS
     case("ssur")
        size = sizeof(this%model%derived%ssur_comb)
+       bmi_status = BMI_SUCCESS
     case("sif")
        size = sizeof(this%model%derived%sif_comb)
+       bmi_status = BMI_SUCCESS
     case("bfs")
        size = sizeof(this%model%derived%bfs_comb)
+       bmi_status = BMI_SUCCESS
     case("bfp")
        size = sizeof(this%model%derived%bfp_comb)
+       bmi_status = BMI_SUCCESS
     case default
        size = -1
        bmi_status = BMI_FAILURE
