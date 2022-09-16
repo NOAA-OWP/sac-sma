@@ -154,7 +154,7 @@ contains
                     parameters%lzpk(nh), parameters%pfree(nh), parameters%side(nh), &
                     parameters%rserv(nh), &
                     ! Sac state variables
-                    modelvar%uztwc(nh), modelvar%uzfwc(nh), modelvar%lzfsc(nh), &
+                    modelvar%uztwc(nh), modelvar%uzfwc(nh), modelvar%lztwc(nh), &
                     modelvar%lzfsc(nh), modelvar%lzfpc(nh), modelvar%adimc(nh), &
                     ! Sac Outputs
                     modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), modelvar%eta(nh), &
