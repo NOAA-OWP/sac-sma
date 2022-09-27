@@ -81,7 +81,7 @@ C
       DS = (TOTAL_S2 - TOTAL_S1)
 
       BAL = P1-ETA-QS-QG-DS
-
+      PRINT*, 'exsac1 - bal: ', BAL 
 C      PRINT*,'exsac1 -',BAL,P1,ETA,Q,QS,QG,DS,TOTAL_S1,TOTAL_S2
 
       RETURN
