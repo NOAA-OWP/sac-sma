@@ -121,10 +121,9 @@ contains
 
     ! local parameters
     integer            :: nh             ! counter for hrus
-    real               :: uztwc_0, uzfwc_0
-    real               :: lztwc_0, lzfsc_0, lzfpc_0
-    real               :: adimc_0
-    real               :: dt_mass_bal
+    real               :: uztwc_0, uzfwc_0, lztwc_0, lzfsc_0, lzfpc_0, adimc_0
+    real               :: dt_mass_bal, dt_mass_bal_perv, dt_mass_bal_imp
+    
     associate(namelist   => model%namelist,   &
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
@@ -143,6 +142,11 @@ contains
       ! call the main sac state update routine in loop over spatial sub-units
       !---------------------------------------------------------------------
       do nh=1, runinfo%n_hrus
+      
+        print*,' '
+        print*, '-- nh, timestamp: ', nh, trim(runinfo%curr_datehr)
+      
+        ! set variables used in mass balance calculation
         uztwc_0 = modelvar%uztwc(nh)
         uzfwc_0 = modelvar%uzfwc(nh)
         lztwc_0 = modelvar%lztwc(nh)
@@ -171,10 +175,7 @@ contains
                     modelvar%roimp(nh), modelvar%sdro(nh), modelvar%ssur(nh), &
                     modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh) )   
                                                    
-        !---------------------------------------------------------------------
-        ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
-        !---------------------------------------------------------------------
-
+        ! -- mass balance calculations
         derived%precip_sum(nh) = derived%precip_sum(nh) + forcing%precip(nh)
         derived%eta_sum(nh) = derived%eta_sum(nh) + modelvar%eta(nh)
         derived%roimp_sum(nh) = derived%roimp_sum(nh) + modelvar%roimp(nh)
@@ -183,7 +184,7 @@ contains
         derived%sif_sum(nh) = derived%sif_sum(nh) + modelvar%sif(nh)
         derived%bfs_sum(nh) = derived%bfs_sum(nh) + modelvar%bfs(nh)
         derived%bfp_sum(nh) = derived%bfp_sum(nh) + modelvar%bfp(nh)
-
+        ! storage changes
         derived%delta_uztwc_sum(nh) = derived%delta_uztwc_sum(nh) + (modelvar%uztwc(nh) - uztwc_0)
         derived%delta_uzfwc_sum(nh) = derived%delta_uzfwc_sum(nh) + (modelvar%uzfwc(nh) - uzfwc_0)
         derived%delta_lztwc_sum(nh) = derived%delta_lztwc_sum(nh) + (modelvar%lztwc(nh) - lztwc_0)
@@ -201,9 +202,23 @@ contains
         dt_mass_bal = forcing%precip(nh) - modelvar%eta(nh) - (modelvar%uztwc(nh) - uztwc_0) -  &
                       (modelvar%uzfwc(nh) - uzfwc_0) - (modelvar%lztwc(nh) - lztwc_0)  - &
                       (modelvar%lzfsc(nh) - lzfsc_0) - (modelvar%lzfpc(nh) - lzfpc_0)  - &
-                      (modelvar%adimc(nh) - adimc_0) - modelvar%qs(nh) - modelvar%qg(nh)
-        print*, 'dt mass balance: ', dt_mass_bal
+                      (modelvar%adimc(nh) - adimc_0) * parameters%adimp(nh) - modelvar%qs(nh) - modelvar%qg(nh)
+                      !(modelvar%adimc(nh) - adimc_0) - modelvar%qs(nh) - modelvar%qg(nh)
+                      
+        dt_mass_bal_perv = forcing%precip(nh) - modelvar%eta(nh) - (modelvar%uztwc(nh) - uztwc_0) -  &
+                      (modelvar%uzfwc(nh) - uzfwc_0) - (modelvar%lztwc(nh) - lztwc_0) - &
+                      (modelvar%lzfsc(nh) - lzfsc_0) - (modelvar%lzfpc(nh) - lzfpc_0) - &
+                      ( modelvar%sdro(nh) + modelvar%ssur(nh) + modelvar%sif(nh) ) - modelvar%qg(nh)
 
+        dt_mass_bal_imp = forcing%precip(nh) - modelvar%eta(nh) - modelvar%roimp(nh) 
+
+        !print*, '-- dt mass balance (nh): ', nh, runinfo%curr_datehr, dt_mass_bal
+        !print*, '-- dt mass balance perv (nh): ', nh, runinfo%curr_datehr, dt_mass_bal_perv
+        !print*, '-- dt mass balance imp (nh): ', nh, runinfo%curr_datehr, dt_mass_bal_imp
+
+        !---------------------------------------------------------------------
+        ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
+        !---------------------------------------------------------------------
 #ifndef NGEN_OUTPUT_ACTIVE
         call write_sac_output(namelist, runinfo, parameters, forcing, modelvar, derived, nh)
 #endif

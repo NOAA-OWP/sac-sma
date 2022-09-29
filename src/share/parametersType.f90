@@ -14,7 +14,9 @@ type, public :: parameters_type
   real, dimension(:), allocatable                :: hru_area   ! sq-km, needed for combination & routing conv.
   real, dimension(:), allocatable                :: uztwm, uzfwm, lztwm, lzfsm, lzfpm, adimp
   real, dimension(:), allocatable                :: uzk, lzpk, lzsk, zperc, rexp
-  real, dimension(:), allocatable                :: pctim, pfree, riva, side, rserv
+  real, dimension(:), allocatable                :: pctim, pfree, side, rserv
+  real, dimension(:), allocatable                :: riva       ! fract. basin covered by riparian veg, lakes, streams
+  
   ! derived vars
   real                                           :: total_area  ! total basin area used in averaging outputs
 

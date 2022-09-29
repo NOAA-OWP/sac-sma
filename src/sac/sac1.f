@@ -1,4 +1,8 @@
-      SUBROUTINE SAC1(DT,PXV,EP,TCI,ROIMP,SDRO,SSUR,SIF,BFS,BFP,TET,
+      SUBROUTINE SAC1(DT,
+c     FORCINGS
+     &                PXV,EP,
+c     OUTPUT VARIABLES (fluxes)        
+     &                TCI,ROIMP,SDRO,SSUR,SIF,BFS,BFP,TET,
 C     SAC FROZEN GROUND VARIABLES
      &                IFRZE,TA,LWE,WE,ISC,AESC,
 C     SAC PARAMETERS
@@ -8,43 +12,40 @@ C     SAC PARAMETERS
 C     SAC State variables  ',
      &                UZTWC,UZFWC,LZTWC,LZFSC,LZFPC,ADIMC)
 
-
 C      IMPLICIT NONE
 
 C.......................................
-C     THIS SUBROUTINE EXECUTES THE 'SAC-SMA ' OPERATION FOR ONE TIME 
-C         PERIOD.
-C.......................................
-C     SUBROUTINE INITIALLY WRITTEN BY. . .
-C            ERIC ANDERSON - HRL     APRIL 1979     VERSION 1
+C     THIS SUBROUTINE EXECUTES THE 'SAC-SMA' OPERATION FOR ONE TIME PERIOD
+C            INITIALLY WRITTEN BY ERIC ANDERSON - HRL APRIL 1979 VERSION 1
 C.......................................
 
 C     RCS Id string, for version control
 c      CHARACTER*60 RCSID
 c      DATA RCSID/"$Id: sac1.f,v 1.1 2006/09/01 21:59:44 vicadmin Exp $"/
 
-      REAL DT
-      REAL PXV
-      REAL EP
-      REAL TCI
-      REAL ROIMP,SDRO,SSUR,SIF,BFS,BFP,TET
+      REAL DT                             ! timestep
+      REAL PXV                            ! precipitation
+      REAL EP                             ! PET input
+      REAL ROIMP,SDRO,SSUR,SIF,BFS,BFP    ! runoff components
+      REAL TCI                            ! total channel input
+      REAL E1,E2,E3,E4,E5,TET             ! ET components and total ET
+      integer NINC                        ! number of sub-periods per timestep
+      real DINC,PINC                      ! subperiod length (days) and amt of subperiod mmoisture handled (sat. excess)
+      real PAREA                          ! pervious area fraction (1-ADIMP-PCTIM)
 
-      INTEGER IFRZE, ISC
+      INTEGER IFRZE,ISC
       REAL TA,LWE,WE,AESC  
-
-      REAL LZTWM,LZFSM,LZFPM,LZSK,LZPK,LZTWC,LZFSC,LZFPC
-
+      REAL LZTWM,LZFSM,LZFPM,LZSK,LZPK,LZTWC,LZFSC,LZFPC,UZTWC,UZFWC
 
 C     COMMON BLOCKS
       COMMON/FSMCO1/FGCO(6),RSUM(7),PPE,PSC,PTA,PWE
       COMMON/FSUMS1/SROT,SIMPVT,SRODT,SROST,SINTFT,SGWFP,SGWFS,SRECHT,
      1              SETT,SE1,SE3,SE4,SE5
 
-
-C      write(*,*) 'pars - ',UZTWM,UZFWM,UZK,PCTIM,ADIMP,RIVA,ZPERC,REXP,
+c ---- CODE STARTS HERE ----
+C      write(*,*) 'params - ',UZTWM,UZFWM,UZK,PCTIM,ADIMP,RIVA,ZPERC,REXP,
 C     1           LZTWM,LZFSM,LZFPM,LZSK,LZPK,PFREE,SIDE,RSERV
-C      write(*,*) 'start sac1 - states ', UZTWC,UZFWC,LZTWC,LZFSC,LZFPC,
-C     &           ADIMC
+C      write(*,*) 'start sac1 - states ', UZTWC,UZFWC,LZTWC,LZFSC,LZFPC,ADIMC
 C      write(*,*) '           - runoff ', ROIMP,SDRO,SSUR,SIF,BFS,BFP
 C      write(*,*) '           - ET ', E1,E2,E3,E4,E5,TET
 
@@ -52,78 +53,84 @@ C.......................................
 C     COMPUTE EVAPOTRANSPIRATION LOSS FOR THE TIME INTERVAL.
 C        EDMND IS THE ET-DEMAND FOR THE TIME INTERVAL
       EDMND=EP
-
 C
-C     COMPUTE ET FROM UPPER ZONE.
+C     COMPUTE ET FROM UPPER ZONE (E1)  ! ie, PET*(UZTW fraction full))
       E1=EDMND*(UZTWC/UZTWM)
       RED=EDMND-E1
 C     RED IS RESIDUAL EVAP DEMAND
-      UZTWC=UZTWC-E1
+      UZTWC=UZTWC-E1             ! this can go negative if PET >> UZTWM, but ...
       E2=0.0
       IF(UZTWC.GE.0.) GO TO 220
-C     E1 CAN NOT EXCEED UZTWC
-      E1=E1+UZTWC
+C     E1 CAN NOT EXCEED UZTWC    ! if negative, set it to UZTWC
+      E1=E1+UZTWC                ! very cumbersome way to do this in code
       UZTWC=0.0
       RED=EDMND-E1
-      IF(UZFWC.GE.RED) GO TO 221
-C     E2 IS EVAP FROM UZFWC.
-      E2=UZFWC
+
+C     COMPUTE EVAP FROM UZFWC (E2)
+      IF(UZFWC.GE.RED) GO TO 221   ! all of remaining demand come from UZFWC but doesn't UZFWC
+      E2=UZFWC                     ! otherwise take all of UZFWC ...
       UZFWC=0.0
-      RED=RED-E2
+      RED=RED-E2                   ! and reduce PET further (by E2)
       GO TO 225
   221 E2=RED
       UZFWC=UZFWC-E2
       RED=0.0
+      
   220 IF((UZTWC/UZTWM).GE.(UZFWC/UZFWM)) GO TO 225
 C     UPPER ZONE FREE WATER RATIO EXCEEDS UPPER ZONE
-C     TENSION WATER RATIO, THUS TRANSFER FREE WATER TO TENSION
+C     TENSION WATER RATIO, THUS TRANSFER FREE WATER TO TENSION  ! set these zones to the same fraction full
       UZRAT=(UZTWC+UZFWC)/(UZTWM+UZFWM)
       UZTWC=UZTWM*UZRAT
       UZFWC=UZFWM*UZRAT
-  225 IF (UZTWC.LT.0.00001) UZTWC=0.0
-      IF (UZFWC.LT.0.00001) UZFWC=0.0
-C
-C     COMPUTE ET FROM THE LOWER ZONE.
+  225 IF (UZTWC.LT.0.00001) UZTWC=0.0           ! breaks mass balance by a tiny fraction
+      IF (UZFWC.LT.0.00001) UZFWC=0.0           ! ditto
+
+C     COMPUTE ET FROM THE LOWER ZONE COMPONENTS
 C     COMPUTE ET FROM LZTWC (E3)
-      E3=RED*(LZTWC/(UZTWM+LZTWM))
+      E3=RED*(LZTWC/(UZTWM+LZTWM))       ! take ET based on fraction full of two tension water storages (UZ & LZ)
       LZTWC=LZTWC-E3
       IF(LZTWC.GE.0.0) GO TO 226
 C     E3 CAN NOT EXCEED LZTWC
       E3=E3+LZTWC
-      LZTWC=0.0
+      LZTWC=0.0                          ! E3 has used all of LZTWC
+
+      ! moving on to lower zones
   226 RATLZT=LZTWC/LZTWM
-CC+
-CC+   INFERRED PARAMETER (ADDED BY Q DUAN ON 3/6/95)
-      SAVED = RSERV * (LZFPM + LZFSM)
+CC+   INFERRED PARAMETER (ADDED BY Q DUAN ON 3/6/95)    ! copied in from fpmco1.f
+                                                        ! 'SAVED' is a residual water content it appears
+      SAVED = RSERV * (LZFPM + LZFSM)      
       RATLZ=(LZTWC+LZFPC+LZFSC-SAVED)/(LZTWM+LZFPM+LZFSM-SAVED)
       IF(RATLZT.GE.RATLZ) GO TO 230
 C     RESUPPLY LOWER ZONE TENSION WATER FROM LOWER
 C     ZONE FREE WATER IF MORE WATER AVAILABLE THERE.
       DEL=(RATLZ-RATLZT)*LZTWM
-C     TRANSFER FROM LZFSC TO LZTWC.
+C     TRANSFER FROM LZFSC TO LZTWC.   ! first take from LZ supplemental
       LZTWC=LZTWC+DEL
       LZFSC=LZFSC-DEL
       IF(LZFSC.GE.0.0) GO TO 230
-C     IF TRANSFER EXCEEDS LZFSC THEN REMAINDER COMES FROM LZFPC
-      LZFPC=LZFPC+LZFSC
+C     IF TRANSFER EXCEEDS LZFSC THEN REMAINDER COMES FROM LZFPC    ! take more if needed from LZ primary
+      LZFPC=LZFPC+LZFSC            ! LZFSC is negative so this is decreasing LZFPC
+                                   ! possible ERROR: no check to see if LZFPC has enough water to stay positive
       LZFSC=0.0
-  230 IF (LZTWC.LT.0.00001) LZTWC=0.0
-C
-C     COMPUTE ET FROM ADIMP AREA.-E5
-      E5=E1+(RED+E2)*((ADIMC-E1-UZTWC)/(UZTWM+LZTWM))
-C      ADJUST ADIMC,ADDITIONAL IMPERVIOUS AREA STORAGE, FOR EVAPORATION.
+  230 IF (LZTWC.LT.0.00001) LZTWC=0.0         ! breaks water balance by small amt
+
+C     COMPUTE ET FROM ADIMP AREA (E5)
+      E5=E1+(RED+E2)*((ADIMC-E1-UZTWC)/(UZTWM+LZTWM))  ! ET from UZTW + [(rest of PET) * fraction: ADIMC after removing
+                                                       !  that UZTW ET and the UTZWC, relative the the combined UZ+LZ TW size]
+      
+C     ADJUST ADIMC,ADDITIONAL IMPERVIOUS AREA STORAGE, FOR EVAPORATION
       ADIMC=ADIMC-E5
       IF(ADIMC.GE.0.0) GO TO 231
 C     E5 CAN NOT EXCEED ADIMC.
       E5=E5+ADIMC
       ADIMC=0.0
-  231 E5=E5*ADIMP
-C     E5 IS ET FROM THE AREA ADIMP.
+  231 E5=E5*ADIMP             ! scale that ET down given the fractional impervious area
+      ! note: even if ADIMP=0 (ie no impervious area), ADIMC is used to capture saturation excess runoff
+ 
 C.......................................
 C     COMPUTE PERCOLATION AND RUNOFF AMOUNTS.
       TWX=PXV+UZTWC-UZTWM
-C     TWX IS THE TIME INTERVAL AVAILABLE MOISTURE IN EXCESS
-C     OF UZTW REQUIREMENTS.
+C     TWX IS THE TIME INTERVAL-AVAILABLE MOISTURE IN EXCESS OF UZTW REQUIREMENTS (ie UZTW capacity).
       IF(TWX.GE.0.0) GO TO 232
 C     ALL MOISTURE HELD IN UZTW--NO EXCESS.
       UZTWC=UZTWC+PXV
@@ -131,14 +138,15 @@ C     ALL MOISTURE HELD IN UZTW--NO EXCESS.
       GO TO 233
 C      MOISTURE AVAILABLE IN EXCESS OF UZTW STORAGE.
   232 UZTWC=UZTWM
-  233 ADIMC=ADIMC+PXV-TWX
-C
-C     COMPUTE IMPERVIOUS AREA RUNOFF.
-      ROIMP=PXV*PCTIM
+  233 ADIMC=ADIMC+PXV-TWX     ! either both UZTWC and ADIMC are increased by PCP; or UZTWC is maxed out
+                              !   and ADIMC is increased by the UZTW surplus (which includes PCP)
+
+C     COMPUTE IMPERVIOUS AREA RUNOFF.   ! this is the truly impervious area where runoff = precip
+      ROIMP=PXV*PCTIM          ! ie precip*perc. imperv.
 C      ROIMP IS RUNOFF FROM THE MINIMUM IMPERVIOUS AREA.
-      SIMPVT=SIMPVT+ROIMP
-C
-C     INITIALIZE TIME INTERVAL SUMS.
+      SIMPVT=SIMPVT+ROIMP      ! simpvt is the sum of imp. area runoff over the simulation time
+
+C     INITIALIZE TIME INTERVAL SUMS
       SBF=0.0
       SSUR=0.0
       SIF=0.0
@@ -146,41 +154,39 @@ C     INITIALIZE TIME INTERVAL SUMS.
       SDRO=0.0
       SPBF=0.0
 
+c     SET SOME NUMERICAL CONTROLS (SUB-STEP INFORMATION)
 C     DETERMINE COMPUTATIONAL TIME INCREMENTS FOR THE BASIC TIME INTERVAL
-      NINC=1.0+0.2*(UZFWC+TWX)
-C     NINC=NUMBER OF TIME INCREMENTS THAT THE TIME INTERVAL
-C     IS DIVIDED INTO FOR FURTHER
-C     SOIL-MOISTURE ACCOUNTING.  NO ONE INCREMENT
-C     WILL EXCEED 5.0 MILLIMETERS OF UZFWC+PAV
+      NINC=1.0+0.2*(UZFWC+TWX)            ! depends on amt of excess rainfall
+C     NINC=NUMBER OF TIME INCREMENTS THAT THE TIME INTERVAL IS DIVIDED INTO FOR FURTHER
+C     SOIL-MOISTURE ACCOUNTING.  NO ONE INCREMENT WILL EXCEED 5.0 MILLIMETERS OF UZFWC+PAV   ! pav?  twx instead?
       DINC=(1.0/NINC)*DT
 C     DINC=LENGTH OF EACH INCREMENT IN DAYS.
       PINC=TWX/NINC
-
-C     PINC=AMOUNT OF AVAILABLE MOISTURE FOR EACH INCREMENT.
-C      COMPUTE FREE WATER DEPLETION FRACTIONS FOR
-C     THE TIME INCREMENT BEING USED-BASIC DEPLETIONS
-C      ARE FOR ONE DAY
+C     PINC=AMOUNT OF AVAILABLE MOISTURE FOR EACH SUBSTEP INCREMENT.
+C     COMPUTE FREE WATER DEPLETION FRACTIONS FOR
+C     THE TIME INCREMENT BEING USED - BASIC DEPLETIONS ARE FOR ONE DAY
       DUZ=1.0-((1.0-UZK)**DINC)
       DLZP=1.0-((1.0-LZPK)**DINC)
       DLZS=1.0-((1.0-LZSK)**DINC)
-CC+
+
 CC+   INFERRED PARAMETER (ADDED BY Q DUAN ON 3/6/95)
-      PAREA = 1.0 - ADIMP - PCTIM
+      PAREA = 1.0 - ADIMP - PCTIM             ! copied in from fpmco1.f
+      
 C.......................................
-C     START INCREMENTAL DO LOOP FOR THE TIME INTERVAL.
+C     START INCREMENTAL DO LOOP FOR THE TIME INTERVAL
 C.......................................
       DO 240 I=1,NINC
 
       ADSUR=0.0
-C     COMPUTE DIRECT RUNOFF (FROM ADIMP AREA).
-      RATIO=(ADIMC-UZTWC)/LZTWM
+C     COMPUTE DIRECT RUNOFF (FROM ADIMP AREA) -- ADDRO
+      RATIO=(ADIMC-UZTWC)/LZTWM                                ! what is the logic here?
 C      WRITE(*,*) 'ADIMC ', ADIMC, UZTWC, LZTWM
       IF (RATIO.LT.0.0) RATIO=0.0
-      ADDRO=PINC*(RATIO**2)
-C      WRITE(*,*) 'ADDRO = ', ADDRO, 'PINK = ', PINK, RATIO
-C     ADDRO IS THE AMOUNT OF DIRECT RUNOFF FROM THE AREA ADIMP.
-C
-C     COMPUTE BASEFLOW AND KEEP TRACK OF TIME INTERVAL SUM.
+      ADDRO=PINC*(RATIO**2)                                    ! ratio could be >> 1, so ADDRO could be > ADIMC
+c      WRITE(*,*) 'SUBSTEP I, ADDRO, PINC, RATIO = ',
+c     &  I, ADDRO, PINC, RATIO    ! error fixed, PINK -> PINC
+
+C     COMPUTE BASEFLOW AND KEEP TRACK OF TIME INTERVAL SUM
       BF=LZFPC*DLZP
       LZFPC=LZFPC-BF
       IF (LZFPC.GT.0.0001) GO TO 234
@@ -195,8 +201,7 @@ C     COMPUTE BASEFLOW AND KEEP TRACK OF TIME INTERVAL SUM.
       LZFSC=0.0
   235 SBF=SBF+BF
 
-C
-C      COMPUTE PERCOLATION-IF NO WATER AVAILABLE THEN SKIP
+C     COMPUTE PERCOLATION - IF NO WATER AVAILABLE THEN SKIP
       IF((PINC+UZFWC).GT.0.01) GO TO 251
       UZFWC=UZFWC+PINC
       GO TO 249
@@ -243,8 +248,8 @@ C         GOING TO FREE WATER.
   243 PERCF=PERCT+LZTWC-LZTWM
       LZTWC=LZTWM
 C
-C      DISTRIBUTE PERCOLATION IN EXCESS OF TENSION
-C      REQUIREMENTS AMONG THE FREE WATER STORAGES.
+C     DISTRIBUTE PERCOLATION IN EXCESS OF TENSION
+C     REQUIREMENTS AMONG THE FREE WATER STORAGES.
   244 PERCF=PERCF+PERC*PFREE
       IF(PERCF.EQ.0.0) GO TO 245
       HPL=LZFPM/(LZFPM+LZFSM)
@@ -275,26 +280,23 @@ C     CHECK TO MAKE SURE LZFPC DOES NOT EXCEED LZFPM.
 C
 C     DISTRIBUTE PINC BETWEEN UZFWC AND SURFACE RUNOFF.
   245 IF(PINC.EQ.0.0) GO TO 249
-C     CHECK IF PINC EXCEEDS UZFWM
+C     CHECK IF PINC BRINGS UZFWC TO EXCEED UZFWM
       IF((PINC+UZFWC).GT.UZFWM) GO TO 248
 C     NO SURFACE RUNOFF
       UZFWC=UZFWC+PINC
       GO TO 249
 C
-C     COMPUTE SURFACE RUNOFF (SUR) AND KEEP TRACK OF TIME INTERVAL SUM.
+C     COMPUTE SURFACE RUNOFF (SUR) AND KEEP TRACK OF TIME INTERVAL SUM
   248 SUR=PINC+UZFWC-UZFWM
       UZFWC=UZFWM
       SSUR=SSUR+SUR*PAREA
       ADSUR=SUR*(1.0-ADDRO/PINC)
 C     ADSUR IS THE AMOUNT OF SURFACE RUNOFF WHICH COMES
-C     FROM THAT PORTION OF ADIMP WHICH IS NOT
-C     CURRENTLY GENERATING DIRECT RUNOFF.  ADDRO/PINC
-C     IS THE FRACTION OF ADIMP CURRENTLY GENERATING
-C     DIRECT RUNOFF.
+C     FROM THAT PORTION OF ADIMP WHICH IS NOT CURRENTLY GENERATING DIRECT RUNOFF.
+C.    ADDRO/PINC IS THE FRACTION OF ADIMP CURRENTLY GENERATING DIRECT RUNOFF.
       SSUR=SSUR+ADSUR*ADIMP
 C
-C     ADIMP AREA WATER BALANCE -- SDRO IS THE 6 HR SUM OF
-C          DIRECT RUNOFF.
+C     ADIMP AREA WATER BALANCE -- SDRO IS THE TIMESTEP SUM OF DIRECT RUNOFF
   249 ADIMC=ADIMC+PINC-ADDRO-ADSUR
       IF (ADIMC.LE.(UZTWM+LZTWM)) GO TO 247
       ADDRO=ADDRO+ADIMC-(UZTWM+LZTWM)
@@ -305,6 +307,7 @@ C      WRITE(*,*) SDRO, ADDRO, ADIMP
   240 CONTINUE
 C.......................................
 C     END OF INCREMENTAL DO LOOP.
+
 C.......................................
 C     COMPUTE SUMS AND ADJUST RUNOFF AMOUNTS BY THE AREA OVER
 C     WHICH THEY ARE GENERATED.
@@ -323,7 +326,7 @@ C     BFCC IS BASEFLOW, CHANNEL COMPONENT
       IF(BFS.LT.0.0)BFS=0.0
       BFNCC=TBF-BFCC
 C     BFNCC IS BASEFLOW,NON-CHANNEL COMPONENT
-C
+
 C     ADD TO MONTHLY SUMS.
       SINTFT=SINTFT+SIF
       SGWFP=SGWFP+BFP
@@ -331,21 +334,21 @@ C     ADD TO MONTHLY SUMS.
       SRECHT=SRECHT+BFNCC
       SROST=SROST+SSUR
       SRODT=SRODT+SDRO
-C
+
 C     COMPUTE TOTAL CHANNEL INFLOW FOR THE TIME INTERVAL.
       TCI=ROIMP+SDRO+SSUR+SIF+BFCC
-C
-C     COMPUTE E4-ET FROM RIPARIAN VEGETATION.
+
+C     COMPUTE E4 (ET FROM RIPARIAN VEGETATION)
       E4=(EDMND-EUSED)*RIVA
-C
+      
 C     SUBTRACT E4 FROM CHANNEL INFLOW
       TCI=TCI-E4
       IF(TCI.GE.0.0) GO TO 250
       E4=E4+TCI
       TCI=0.0
   250 SROT=SROT+TCI
-C
-C     COMPUTE TOTAL EVAPOTRANSPIRATION-TET
+
+C     COMPUTE TOTAL EVAPOTRANSPIRATION (TET)
       EUSED=EUSED*PAREA
       TET=EUSED+E5+E4
       SETT=SETT+TET
@@ -353,20 +356,20 @@ C     COMPUTE TOTAL EVAPOTRANSPIRATION-TET
       SE3=SE3+E3*PAREA
       SE4=SE4+E4
       SE5=SE5+E5
-      PRINT*,'sac1 - TET: ', TET
-C     CHECK THAT ADIMC.GE.UZTWC
-      IF (ADIMC.LT.UZTWC) ADIMC=UZTWC
-
+      
+C     CHECK THAT ADIMC .GE. UZTWC
+      IF (ADIMC.LT.UZTWC) ADIMC=UZTWC      ! reset adimc to uztwc; this would break the water balance if 
+                                           ! uztwc is not proportionally lowered
+                                           
 C      write(*,*) 'end sac1 - states ', UZTWC,UZFWC,LZTWC,LZFSC,LZFPC,
 C     &           ADIMC
 C      write(*,*) '           - runoff ', ROIMP,SDRO,SSUR,SIF,BFS,BFP
 C      write(*,*) '           - ET ', E1,E2,E3,E4,E5,TET
 
-C
 C     COMPUTE NEW FROST INDEX AND MOISTURE TRANSFER.
       IF (IFRZE.GT.0) CALL FROST1(PXV,SSUR,SDRO,TA,LWE,WE,ISC,AESC,DT)
 C
-C     ADD TO SUMS OF RUNOFF COMPONENTS.
+C     ADD TO SUMS OF RUNOFF COMPONENTS
       RSUM(1)=RSUM(1)+TCI
       RSUM(2)=RSUM(2)+ROIMP
       RSUM(3)=RSUM(3)+SDRO
@@ -376,7 +379,7 @@ C     ADD TO SUMS OF RUNOFF COMPONENTS.
       RSUM(7)=RSUM(7)+BFP
 C.......................................
 
-C      WRITE(*,*) 'sac1.for ', DT,PXV,EP,TCI,ROIMP,SDRO,SSUR,SIF,BFS,BFP,TET,
+C      WRITE(*,*) 'sac1.for:', DT,PXV,EP,TCI,ROIMP,SDRO,SSUR,SIF,BFS,BFP,TET,
 C     &                IFRZE,TA,LWE,WE,ISC,AESC
 
       RETURN

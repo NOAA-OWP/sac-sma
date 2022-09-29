@@ -83,3 +83,6 @@ dist/
 NOTES
 LASTNEXT
 *.ipynb*
+
+# test case expanded
+test_cases/ex1/
