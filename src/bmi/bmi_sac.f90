@@ -98,7 +98,7 @@ module bmi_sac_module
 
   ! Exchange items
   integer, parameter :: input_item_count = 3
-  integer, parameter :: output_item_count = 4
+  integer, parameter :: output_item_count = 10
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -159,7 +159,13 @@ contains
     output_items(1) = 'qs'      ! runoff from direct runoff, impervious runoff, surface runoff, and interflow (mm)
     output_items(2) = 'qg'      ! baseflow (mm)
     output_items(3) = 'tci'     ! total channel inflow from upstream (mm)
-    output_items(4) = 'eta'     ! actual evapotranspiration (mm) ??
+    output_items(4) = 'eta'     ! actual evapotranspiration (mm) 
+    output_items(5) = 'roimp'  ! impervious area runoff (mm)
+    output_items(6) = 'sdro'   ! direct runoff (mm)
+    output_items(7) = 'ssur'   ! surface runoff (mm)
+    output_items(8) = 'sif'    ! interflow (mm)
+    output_items(9) = 'bfs'    ! non-channel baseflow component (mm)
+    output_items(10) = 'bfp'    ! baseflow component (mm)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -297,8 +303,9 @@ contains
     integer :: bmi_status
 
     select case(name)
-    case('tair', 'precip', 'pet', &     ! input vars
-         'qs', 'qg', 'tci', 'eta')      ! output vars
+    case('tair', 'precip', 'pet', &                  ! input vars
+         'qs', 'qg', 'tci', 'eta',  &                ! output vars
+         'roimp','sdro','ssur','sif','bfs','bfp')
        grid = 0
        bmi_status = BMI_SUCCESS
     case default
@@ -568,8 +575,9 @@ contains
     integer :: bmi_status
 
     select case(name)
-    case('tair', 'precip', 'pet',  &     ! input vars
-         'qs', 'qg', 'tci', 'eta')       ! output vars
+    case('tair', 'precip', 'pet',  &                ! input vars
+         'qs', 'qg', 'tci', 'eta', &                ! output vars
+         'roimp','sdro','ssur','sif','bfs','bfp')
        type = "real"
        bmi_status = BMI_SUCCESS
     case default
@@ -606,6 +614,42 @@ contains
     case("eta")
        units = "mm"
        bmi_status = BMI_SUCCESS
+    case("uztwc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("uzfwc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lztwc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lzfsc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lzfpc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("adimc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("roimp")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("sdro")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("ssur")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("sif")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("bfs")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("bfp")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
     case default
        units = "-"
        bmi_status = BMI_FAILURE
@@ -621,25 +665,44 @@ contains
 
     select case(name)
     case("precip")
-       size = sizeof(this%model%forcing%precip_comb)    ! 'sizeof' in gcc & ifort
+       size = sizeof(this%model%derived%precip_comb)    ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
     case("tair")
-       size = sizeof(this%model%forcing%tair_comb)      ! 'sizeof' in gcc & ifort
+       size = sizeof(this%model%derived%tair_comb)      ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
     case("pet")
-       size = sizeof(this%model%forcing%pet_comb)     ! 'sizeof' in gcc & ifort
+       size = sizeof(this%model%derived%pet_comb)       ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
     case("qs")
-       size = sizeof(this%model%modelvar%qs_comb)     ! 'sizeof' in gcc & ifort
+       size = sizeof(this%model%derived%qs_comb)        ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
     case("qg")
-       size = sizeof(this%model%modelvar%qg_comb)     ! 'sizeof' in gcc & ifort
+       size = sizeof(this%model%derived%qg_comb)        ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
     case("tci")
-       size = sizeof(this%model%modelvar%tci_comb)      ! 'sizeof' in gcc & ifort
+       size = sizeof(this%model%derived%tci_comb)      ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
     case("eta")
-       size = sizeof(this%model%modelvar%eta_comb)
+       size = sizeof(this%model%derived%eta_comb)
+       bmi_status = BMI_SUCCESS
+    case("roimp")
+       size = sizeof(this%model%derived%roimp_comb)
+       bmi_status = BMI_SUCCESS
+    case("sdro")
+       size = sizeof(this%model%derived%sdro_comb)
+       bmi_status = BMI_SUCCESS
+    case("ssur")
+       size = sizeof(this%model%derived%ssur_comb)
+       bmi_status = BMI_SUCCESS
+    case("sif")
+       size = sizeof(this%model%derived%sif_comb)
+       bmi_status = BMI_SUCCESS
+    case("bfs")
+       size = sizeof(this%model%derived%bfs_comb)
+       bmi_status = BMI_SUCCESS
+    case("bfp")
+       size = sizeof(this%model%derived%bfp_comb)
+       bmi_status = BMI_SUCCESS
     case default
        size = -1
        bmi_status = BMI_FAILURE
@@ -708,25 +771,43 @@ contains
 
     select case(name)
     case("precip")
-       dest(1) = this%model%forcing%precip_comb
+       dest(1) = this%model%derived%precip_comb
        bmi_status = BMI_SUCCESS
     case("tair")
-       dest(1) = this%model%forcing%tair_comb
+       dest(1) = this%model%derived%tair_comb
        bmi_status = BMI_SUCCESS
     case("pet")
-       dest(1) = this%model%forcing%pet_comb
+       dest(1) = this%model%derived%pet_comb
        bmi_status = BMI_SUCCESS
     case("qs")
-       dest(1) = this%model%modelvar%qs_comb
+       dest(1) = this%model%derived%qs_comb
        bmi_status = BMI_SUCCESS
     case("qg")
-       dest(1) = this%model%modelvar%qg_comb
+       dest(1) = this%model%derived%qg_comb
        bmi_status = BMI_SUCCESS
     case("tci")
-       dest(1) = this%model%modelvar%tci_comb
+       dest(1) = this%model%derived%tci_comb
        bmi_status = BMI_SUCCESS
     case("eta")
-       dest(1) = this%model%modelvar%eta_comb
+       dest(1) = this%model%derived%eta_comb
+       bmi_status = BMI_SUCCESS
+    case("roimp")
+       dest(1) = this%model%derived%roimp_comb
+       bmi_status = BMI_SUCCESS
+    case("sdro")
+       dest(1) = this%model%derived%sdro_comb
+       bmi_status = BMI_SUCCESS
+    case("ssur")
+       dest(1) = this%model%derived%ssur_comb
+       bmi_status = BMI_SUCCESS
+    case("sif")
+       dest(1) = this%model%derived%sif_comb
+       bmi_status = BMI_SUCCESS
+    case("bfs")
+       dest(1) = this%model%derived%bfs_comb
+       bmi_status = BMI_SUCCESS
+    case("bfp")
+       dest(1) = this%model%derived%bfp_comb
        bmi_status = BMI_SUCCESS
     case default
        dest(:) = -1.0
@@ -884,25 +965,43 @@ contains
 
     select case(name)
     case("precip")
-       this%model%forcing%precip_comb = src(1)
+       this%model%derived%precip_comb = src(1)
        bmi_status = BMI_SUCCESS
     case("tair")
-       this%model%forcing%tair_comb = src(1)
+       this%model%derived%tair_comb = src(1)
        bmi_status = BMI_SUCCESS
     case("pet")
-       this%model%forcing%pet_comb = src(1)
+       this%model%derived%pet_comb = src(1)
        bmi_status = BMI_SUCCESS
     case("qs")
-       this%model%modelvar%qs_comb = src(1)
+       this%model%derived%qs_comb = src(1)
        bmi_status = BMI_SUCCESS
     case("qg")
-       this%model%modelvar%qg_comb = src(1)
+       this%model%derived%qg_comb = src(1)
        bmi_status = BMI_SUCCESS
     case("tci")
-       this%model%modelvar%tci_comb = src(1)
+       this%model%derived%tci_comb = src(1)
        bmi_status = BMI_SUCCESS
     case("eta")
-       this%model%modelvar%eta_comb = src(1)
+       this%model%derived%eta_comb = src(1)
+       bmi_status = BMI_SUCCESS
+    case("roimp")
+       this%model%derived%roimp_comb = src(1)
+       bmi_status = BMI_SUCCESS
+    case("sdro")
+       this%model%derived%sdro_comb = src(1)
+       bmi_status = BMI_SUCCESS
+    case("ssur")
+       this%model%derived%ssur_comb = src(1)
+       bmi_status = BMI_SUCCESS
+    case("sif")
+       this%model%derived%sif_comb = src(1)
+       bmi_status = BMI_SUCCESS
+    case("bfs")
+       this%model%derived%bfs_comb = src(1)
+       bmi_status = BMI_SUCCESS
+    case("bfp")
+       this%model%derived%bfp_comb = src(1)
        bmi_status = BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE

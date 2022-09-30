@@ -6,7 +6,7 @@ We follow the [Semantic Versioning 2.0.0](http://semver.org/) format.
 
 ### Added
 
-- Lorem ipsum dolor sit amet
+- A. Wood and R. McDaniel, Sep 2021:  Water balance calculations in ex_sac1.f
 
 ### Deprecated
 

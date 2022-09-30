@@ -8,6 +8,7 @@ module runModule
   use runInfoType
   use forcingType
   use modelVarType
+  use derivedType
 
   implicit none
 
@@ -17,6 +18,7 @@ module runModule
     type(parameters_type) :: parameters
     type(forcing_type)    :: forcing
     type(modelvar_type)   :: modelvar
+    type(derived_type)    :: derived
   end type sac_type
 
 contains
@@ -33,7 +35,8 @@ contains
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
               forcing    => model%forcing,    &
-              modelvar   => model%modelvar)
+              modelvar   => model%modelvar,   &
+              derived    => model%derived)
               
       !-----------------------------------------------------------------------------------------
       !  read namelist, initialize data structures and read parameters
@@ -44,6 +47,7 @@ contains
       call forcing%initForcing(namelist)       ! initialize forcing data type/structure
       call modelvar%initModelVar(namelist)     ! initialize model states (incl. restarts)
       call parameters%initParams(namelist)     ! read and/or initialize parameters
+      call derived%initDerived(namelist)       ! initialize derived values
       
       ! read parameters from input file
       call read_sac_parameters(parameters, namelist%sac_param_file, runinfo)
@@ -117,12 +121,15 @@ contains
 
     ! local parameters
     integer            :: nh             ! counter for hrus
-
+    real               :: uztwc_0, uzfwc_0, lztwc_0, lzfsc_0, lzfpc_0, adimc_0
+    real               :: dt_mass_bal, dt_mass_bal_perv, dt_mass_bal_imp
+    
     associate(namelist   => model%namelist,   &
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
               forcing    => model%forcing,    &
-              modelvar   => model%modelvar)
+              modelvar   => model%modelvar,   &
+              derived    => model%derived)
       !---------------------------------------------------------------------
       ! Read in the forcing data if NGEN_FORCING_ACTIVE is not defined
       !   will read current timestep forcing for all snowbands
@@ -135,6 +142,18 @@ contains
       ! call the main sac state update routine in loop over spatial sub-units
       !---------------------------------------------------------------------
       do nh=1, runinfo%n_hrus
+      
+        print*,' '
+        print*, '-- nh, timestamp: ', nh, trim(runinfo%curr_datehr)
+      
+        ! set variables used in mass balance calculation
+        uztwc_0 = modelvar%uztwc(nh)
+        uzfwc_0 = modelvar%uzfwc(nh)
+        lztwc_0 = modelvar%lztwc(nh)
+        lzfsc_0 = modelvar%lzfsc(nh)
+        lzfpc_0 = modelvar%lzfpc(nh)
+        adimc_0 = modelvar%adimc(nh)
+         
         call exsac( 1, &                     ! NSOLD, which isn't used
                     real(runinfo%dt), &      ! DTM, the timestep in seconds
                     ! Forcing inputs
@@ -149,16 +168,59 @@ contains
                     parameters%lzpk(nh), parameters%pfree(nh), parameters%side(nh), &
                     parameters%rserv(nh), &
                     ! Sac state variables
-                    modelvar%uztwc(nh), modelvar%uzfwc(nh), modelvar%lzfsc(nh), &
+                    modelvar%uztwc(nh), modelvar%uzfwc(nh), modelvar%lztwc(nh), &
                     modelvar%lzfsc(nh), modelvar%lzfpc(nh), modelvar%adimc(nh), &
                     ! Sac Outputs
-                    modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), modelvar%eta(nh) )   
+                    modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), modelvar%eta(nh), &
+                    modelvar%roimp(nh), modelvar%sdro(nh), modelvar%ssur(nh), &
+                    modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh) )   
                                                    
+        ! -- mass balance calculations
+        derived%precip_sum(nh) = derived%precip_sum(nh) + forcing%precip(nh)
+        derived%eta_sum(nh) = derived%eta_sum(nh) + modelvar%eta(nh)
+        derived%roimp_sum(nh) = derived%roimp_sum(nh) + modelvar%roimp(nh)
+        derived%sdro_sum(nh) = derived%sdro_sum(nh) + modelvar%sdro(nh)
+        derived%ssur_sum(nh) = derived%ssur_sum(nh) + modelvar%ssur(nh)
+        derived%sif_sum(nh) = derived%sif_sum(nh) + modelvar%sif(nh)
+        derived%bfs_sum(nh) = derived%bfs_sum(nh) + modelvar%bfs(nh)
+        derived%bfp_sum(nh) = derived%bfp_sum(nh) + modelvar%bfp(nh)
+        ! storage changes
+        derived%delta_uztwc_sum(nh) = derived%delta_uztwc_sum(nh) + (modelvar%uztwc(nh) - uztwc_0)
+        derived%delta_uzfwc_sum(nh) = derived%delta_uzfwc_sum(nh) + (modelvar%uzfwc(nh) - uzfwc_0)
+        derived%delta_lztwc_sum(nh) = derived%delta_lztwc_sum(nh) + (modelvar%lztwc(nh) - lztwc_0)
+        derived%delta_lzfsc_sum(nh) = derived%delta_lzfsc_sum(nh) + (modelvar%lzfsc(nh) - lzfsc_0)
+        derived%delta_lzfpc_sum(nh) = derived%delta_lzfpc_sum(nh) + (modelvar%lzfpc(nh) - lzfpc_0)
+        derived%delta_adimc_sum(nh) = derived%delta_adimc_sum(nh) + (modelvar%adimc(nh) - adimc_0)
+
+        derived%qs_sum(nh) = derived%roimp_sum(nh) + derived%sdro_sum(nh) + derived%ssur_sum(nh) + derived%sif_sum(nh) 
+        derived%qg_sum(nh) = derived%bfs_sum(nh) + derived%bfp_sum(nh)
+        derived%delta_storage_sum(nh) = derived%delta_uztwc_sum(nh) + derived%delta_uzfwc_sum(nh) +  &
+                                        derived%delta_lztwc_sum(nh) + derived%delta_lzfsc_sum(nh) +  &
+                                        derived%delta_lzfpc_sum(nh) + derived%delta_adimc_sum(nh)
+        derived%mass_balance(nh) = derived%precip_sum(nh) - derived%eta_sum(nh) -       &
+                                   derived%qs_sum(nh) - derived%qg_sum(nh) - derived%delta_storage_sum(nh)
+        dt_mass_bal = forcing%precip(nh) - modelvar%eta(nh) - (modelvar%uztwc(nh) - uztwc_0) -  &
+                      (modelvar%uzfwc(nh) - uzfwc_0) - (modelvar%lztwc(nh) - lztwc_0)  - &
+                      (modelvar%lzfsc(nh) - lzfsc_0) - (modelvar%lzfpc(nh) - lzfpc_0)  - &
+                      (modelvar%adimc(nh) - adimc_0) * parameters%adimp(nh) - modelvar%qs(nh) - modelvar%qg(nh)
+                      !(modelvar%adimc(nh) - adimc_0) - modelvar%qs(nh) - modelvar%qg(nh)
+                      
+        dt_mass_bal_perv = forcing%precip(nh) - modelvar%eta(nh) - (modelvar%uztwc(nh) - uztwc_0) -  &
+                      (modelvar%uzfwc(nh) - uzfwc_0) - (modelvar%lztwc(nh) - lztwc_0) - &
+                      (modelvar%lzfsc(nh) - lzfsc_0) - (modelvar%lzfpc(nh) - lzfpc_0) - &
+                      ( modelvar%sdro(nh) + modelvar%ssur(nh) + modelvar%sif(nh) ) - modelvar%qg(nh)
+
+        dt_mass_bal_imp = forcing%precip(nh) - modelvar%eta(nh) - modelvar%roimp(nh) 
+
+        !print*, '-- dt mass balance (nh): ', nh, runinfo%curr_datehr, dt_mass_bal
+        !print*, '-- dt mass balance perv (nh): ', nh, runinfo%curr_datehr, dt_mass_bal_perv
+        !print*, '-- dt mass balance imp (nh): ', nh, runinfo%curr_datehr, dt_mass_bal_imp
+
         !---------------------------------------------------------------------
         ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
         !---------------------------------------------------------------------
 #ifndef NGEN_OUTPUT_ACTIVE
-        call write_sac_output(namelist, runinfo, parameters, forcing, modelvar, nh)
+        call write_sac_output(namelist, runinfo, parameters, forcing, modelvar, derived, nh)
 #endif
         ! === write out end-of-timestep values to STATE FILES for sac if requested in namelist ===
 #ifndef NGEN_WRITE_RESTART_ACTIVE

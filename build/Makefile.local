@@ -70,9 +70,9 @@ endif
 
 # --- sac code (fortran 90, different options)
 sac = \
-		duamel.f \
 		ex_sac1.f \
 		sac1.f 
+#		duamel.f \
 		
 model_sac = $(patsubst %, $(sac_dir)/%, $(sac))
 
@@ -87,6 +87,7 @@ run_util = \
         dateTimeUtilsModule.f90 \
         runInfoType.f90 \
         modelVarType.f90 \
+        derivedType.f90\
         ioModule.f90 \
         runSac.f90 
 
