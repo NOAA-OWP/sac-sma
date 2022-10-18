@@ -312,7 +312,7 @@ contains
         endif
       
         ! Write 1-line header
-        write(runinfo%output_fileunits(nh+1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta roimp sdro ssur sif bfs bfp'
+        write(runinfo%output_fileunits(nh+1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta roimp sdro ssur sif bfs bfp bfncc'
         
       end do  ! end loop over sub-units
       
@@ -376,7 +376,7 @@ contains
     41 FORMAT(I0.4, 3(I0.2), 20(F20.12))    ! use maximum precision (for double)
     write(runinfo%state_fileunits(n_curr_hru), 41, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
           modelvar%uztwc(n_curr_hru), modelvar%uzfwc(n_curr_hru), modelvar%lztwc(n_curr_hru), &
-          modelvar%lzfsc(n_curr_hru), modelvar%lzfpc(n_curr_hru), modelvar%adimc(n_curr_hru)
+          modelvar%lzfsc(n_curr_hru), modelvar%lzfpc(n_curr_hru), modelvar%adimc(n_curr_hru), modelvar%bfncc(n_curr_hru)
     if(ierr /= 0) then
       print*, 'ERROR writing state file information for sub-unit ', n_curr_hru; stop
     endif
@@ -492,7 +492,7 @@ contains
             modelvar%qs(n_curr_hru), modelvar%qg(n_curr_hru), modelvar%tci(n_curr_hru), & 
             modelvar%eta(n_curr_hru), modelvar%roimp(n_curr_hru), modelvar%sdro(n_curr_hru), &
             modelvar%ssur(n_curr_hru), modelvar%sif(n_curr_hru), modelvar%bfs(n_curr_hru), &
-            modelvar%bfp(n_curr_hru)
+            modelvar%bfp(n_curr_hru), modelvar%bfncc(n_curr_hru)
       if(ierr /= 0) then
         print*, 'ERROR writing output information for basin average'; stop
       endif            

@@ -19,7 +19,7 @@ program multi_driver
   use bmi_sac_module
   use bmif_2_0
   use dateTimeUtilsModule
-
+ 
   implicit none
 
   !---------------------------------------------------------------------
@@ -81,6 +81,7 @@ program multi_driver
   ! Finalize the model run
   ! All model finalization code in ../src/RunSac.f90
   !---------------------------------------------------------------------
+
   print*, "Finalizing..."
   status = m%finalize()
   print*, "DONE"

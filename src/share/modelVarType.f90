@@ -22,9 +22,9 @@ module modelVarType
     real, dimension(:), allocatable    :: sdro   ! direct runoff (mm)
     real, dimension(:), allocatable    :: ssur   ! surface runoff (mm)
     real, dimension(:), allocatable    :: sif    ! interflow (mm)
-    real, dimension(:), allocatable    :: bfs    ! non-channel baseflow component (mm)
-    real, dimension(:), allocatable    :: bfp    ! baseflow component (mm)
-
+    real, dimension(:), allocatable    :: bfs    ! channel baseflow component (mm)
+    real, dimension(:), allocatable    :: bfp    ! channel baseflow component (mm)
+    real, dimension(:), allocatable    :: bfncc  ! baseflow non-channelcomponent (mm)
             
     contains
 
@@ -58,7 +58,8 @@ module modelVarType
     allocate(this%ssur  (1:namelist%n_hrus))
     allocate(this%sif   (1:namelist%n_hrus))
     allocate(this%bfs   (1:namelist%n_hrus))
-    allocate(this%bfp   (1:namelist%n_hrus))   
+    allocate(this%bfp   (1:namelist%n_hrus))
+    allocate(this%bfncc (1:namelist%n_hrus))   
 ! -- default assignmtents
     this%uztwc(:)      = 0.0
     this%uzfwc(:)      = 0.0 
@@ -76,7 +77,7 @@ module modelVarType
     this%sif(:)        = 0.0
     this%bfs(:)        = 0.0
     this%bfp(:)        = 0.0
-   
+    this%bfncc(:)      = 0.0
   end subroutine initModelVar
 
 end module modelVarType

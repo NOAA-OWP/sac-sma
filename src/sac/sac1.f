@@ -1,4 +1,5 @@
       SUBROUTINE SAC1(DT,PXV,EP,TCI,ROIMP,SDRO,SSUR,SIF,BFS,BFP,TET,
+     &                BFNCC,
 C     SAC FROZEN GROUND VARIABLES
      &                IFRZE,TA,LWE,WE,ISC,AESC,
 C     SAC PARAMETERS
@@ -8,8 +9,181 @@ C     SAC PARAMETERS
 C     SAC State variables  ',
      &                UZTWC,UZFWC,LZTWC,LZFSC,LZFPC,ADIMC)
 
+C----------------------------------------------------------------
+C      RLM - Removed comment from IMPLICIT NONE and added
+C            explicit variable/parameter list - 10/22
 
 C      IMPLICIT NONE
+
+C    ----- PARAMETERS -----
+C    UZTWM    Maximum upper zone tension water
+C    UZFWM    Maximum upper zone free water
+C    LZTWM    Maximum lower zone tension water
+C    LZFSM    Maximum lower zone free water, secondary (aka
+C                 supplemental)
+C    LZFPM    Maximum lower zone free water, primary
+C    ADIMP    Additional "impervious" area due to saturation.  Also has
+C                 been defined as the fraction of area that can produce
+C                 direct runoff - this is the maximum value it can be
+C    UZK      Upper zone recession coefficient
+C    LZPK     Lower zone recession coefficient, primary
+C    LZSK     Lower zone recession coefficient, secondary (supplemental)
+C    ZPERC    Minimum percolation rate coefficient
+C    REXP     Percolation equation exponent
+C    PCTIM    Minimum percent impervious area.  this area is always
+C                 impervious (e.g. roads)
+C    PFREE    Percent percolating directly to lower zone free water
+C    RIVA     Percent riparian area
+C    SIDE     Portion of baseflow which does *NOT* got to the stream
+C    RSERV    Percent of lower zone free water not transferable to the
+C                 lower zone tension water
+      REAL UZTWM,UZFWM,LZTWM,LZFSM,LZFPM
+      REAL ADIMP,UZK,LZPK,LZSK
+      REAL ZPERC,REXP,PCTIM,PFREE,RIVA,SIDE,RSERV
+
+C    ----- FORCINGS -----
+C    PXV      Input moisture (e.g. precip, precip+melt)
+C    ET       Potential evapotranspiration
+      REAL PXV,EP
+
+C    ----- VARIABLES -----
+C    DT       Computational time interval
+C    IFRZE    Frozen ground module switch.  0 = No frozen ground module,
+C                 1 = Use frozen ground module
+C    EDMND    ET demand for the time interval
+C    E1       ET from the upper zone tension water content (UZTWC)
+C    RED      Residual ET demand
+C    E2       ET from upper zone free water content (UZFWC)
+C    UZRAT    Upper zone ratio used to transfer water from free to
+C                 tension water store
+C    E3       ET from the lower zone tension water content (LZTWC)
+C    RATLZT   Ratio of the lower zone tension water content to the
+C                 maximum tension water.  AKA: percent saturation of 
+C                 the lower zone tension water
+C    DEL      Used for multiple calculations in the code:
+C                 1. Amount of water moved from lower zone free water
+C                    content to the tension water content
+C                 2. Incremental interflow
+C    E5       ET from ADIMP area
+C    TWX      Time interval available moisture in excess of UZTW
+C                 requirements
+C    SIMPVT   Sum of ROIMP
+C    SPERC    Sum of incremental percolation
+C    SPBF     Sum of the incremental LZ primary baseflow component only
+C    NINC     Number of time sub-increments that the time interval is
+C                 diveded into for further soil moisture accounting
+C    DINC     Length of each sub-increment (calculated by NINC) in days
+C    PINC     Amount of available moisture for each time sub-increment
+C    DUZ      Depletion in the upper zone
+C    DLZP     Depletion in the lower zone, primary
+C    DLZS     Depletion in the lower zone, secondary
+C    PAREA    Pervious area
+C    I        Loop counter
+C    ADSUR    Surface runoff from portion of ADIMP not currently
+C                 generating direct runoff (ADDRO)
+C    RATIO    Ratio of excess water in the upper zone from ADIMC to the
+C                 maximum lower zone tension water. Used to calculate
+C                 ADDRO
+C    ADDRO    Additional "impervious" direct runoff from ADIMP.
+C                 Essentially saturation excess runoff from ADIMP area
+C    BF       Used for multiple baseflow calculations in the code
+C                 1. Incremental baseflow, lower zone primary
+C                 2. Incremental baseflow, lower zone secondary
+C    SBF      Sum of the incremental baseflow components (LZ primary,
+C                 secondary).
+C    PERCM    Limiting percolation value (aka maximum percolation). In
+C                 some documentation it is referred to as PBASE
+C    PERC     Percolation
+C    DEFR     Lower zone moisture deficiency ratio
+C    FR       Change in percolation withdrawal due to frozen ground
+C    FI       Change in interflow withdrawal due to frozen ground
+C    UZDEFR   Calculated, but not used. RECOMMEND removing
+C    CHECK    A check to see if percolation exceeds the lower zone
+C                 deficiency
+C    SPERC    Sum of interval percolation
+C    PERCT    Percolation to tension water
+C    PERCF    Percolation to free water
+C    HPL      Relative size of the lower zone max free water, primary
+C                 storage to the lower zone total max free water storage
+C    RATLP    Content capacity ratio (LZ, primary) (i.e. relative
+C                 fullness)
+C    RATLS    Content capacity ratio (LZ, secondary) (i.e. relative
+C                 fullness)
+C    FRACP    Fraction going to primary store during each interval
+C    PERCP    Amount of excess percolation going to the LZ primary store
+C    PERCS    Amount of excess percolation going to the LZ secondary
+C                 store
+C    EXCESS   LZ free water in excess of the maximum to be removed from
+C                 LZFPC and added to LZTWC
+C    SUR      Incremental surface runoff.  Not multiplied by PAREA until
+C                 added to the sum (SSUR)
+C    EUSED    Total ET from the pervious area (PAREA) = E1+E2+E3
+C    TBF      Total baseflow
+C    BFCC     Baseflow channel component (reduces TBF by fraction SIDE)
+C    SINTFT   Monthly sum of SIF (NOT USED)
+C    SGWFP    Monthly sum of BFP (NOT USED)
+C    SGWFS    Monthly sum of BFS (NOT USED)
+C    SRECHT   Monthly sum of BFNCC (NOT USED)
+C    SROST    Monthly sum of SSUR (NOT USED)
+C    SRODT    Monthly sum of SDRO (NOT USED)
+C    E4       ET from riparian vegetation using RIVA
+C    SROT     Assuming this is the monthly sum of TCI (NOT USED)
+C    TET      Total evapotranspiration
+C    SETT     Assuming this is the monthly sum of TET (NOT USED)
+C    SE1      Assuming this is the monthly sum of E1 (NOT USED)
+C    SE2      Assuming this is the monthly sum of E2 (NOT USED)
+C    SE3      Assuming this is the monthly sum of E3 (NOT USED)
+C    SE4      Assuming this is the monthly sum of E4 (NOT USED)
+C    SE5      Assuming this is the monthly sum of E5 (NOT USED)
+C    RSUM(7)  Sums of (1) TCI, (2) ROIMP, (3) SDRO, (4) SSUR, (5) SIF,
+C                 (6) BFS, (7) BFP. (NOT USED)
+
+      REAL DT,EDMND,E1,RED,E2,UZRAT,E3,RATLZT,SAVED,RATLZ,DEL,E5
+      REAL TWX,SIMPVT,SPERC,DINC,PINC,DUZ,DLZP,DLZS,PAREA
+      REAL ADSUR,RATIO,ADDRO,BF,SBF,SPBF,PERCM,PERC,DEFR,FR,FI
+      REAL UZDEFR,CHECK,PERCT,PERCF,HPL,RATLP,RATLS,FRACP
+      REAL PERCP,PERCS,EXCESS,SUR,EUSED,TBF,BFCC,E4
+     
+      REAL TA,LWE,WE,AESC
+
+      INTEGER IFRZE,I,ISC,NINC
+
+
+      REAL SINTFT,SGWFP,SGWFS,SRECHT,SROST,SRODT,SROT,SETT
+      REAL SE1,SE2,SE3,SE4,SE5,RSUM(7)
+
+      COMMON/FSMCO1/FGCO(6),RSUM,PPE,PSC,PTA,PWE
+      COMMON/FSUMS1/SROT,SIMPVT,SRODT,SROST,SINTFT,SGWFP,SGWFS,SRECHT,
+     1              SETT,SE1,SE3,SE4,SE5
+
+
+C ----- OUTPUTS -----
+C    TCI      Total Channel Inflow
+C    ROIMP    Impervious runoff from the permanent impervious area
+C                 (PCTIM)
+C    SDRO     Sum of the direct runoff (from ADIMP)
+C    SSUR     Sum of the indirect surface runoff components from ADIMP
+C                 and PAREA
+C    SIF      Sum of the interflow
+C    BFS      Secondary baseflow, channel component
+C    BFP      Primary baseflow, channel component
+C    TET      Total evapotranspiration (E1+E2+E3+E4+E5)
+C    BFNCC    Baseflow, non-channel component
+C    UZTWC    Upper zone tension water content. (not multiplied by area)
+C    UZFWC    Upper zone free water content. (not multiplied by area)
+C    LZTWC    Lower zone tension water content (not multiplied by area)
+C    LZFSC    Lower zone free water content, secondary. (not multiplied
+C                 by area)
+C    LZFPC    Lower zone free water content, primary. (not multiplied by
+C                 area)
+C    ADIMC    Additional impervious area water content. (not multiplied
+C                 by area)
+
+      REAL TCI,ROIMP,SDRO,SSUR,SIF,BFS,BFP,TET,BFNCC
+      REAL UZTWC,UZFWC,LZTWC,LZFSC,LZFPC,ADIMC
+
+
+C---------------------------------------------------------------
 
 C.......................................
 C     THIS SUBROUTINE EXECUTES THE 'SAC-SMA ' OPERATION FOR ONE TIME 
@@ -23,23 +197,25 @@ C     RCS Id string, for version control
 c      CHARACTER*60 RCSID
 c      DATA RCSID/"$Id: sac1.f,v 1.1 2006/09/01 21:59:44 vicadmin Exp $"/
 
-      REAL DT
-      REAL PXV
-      REAL EP
-      REAL TCI
-      REAL ROIMP,SDRO,SSUR,SIF,BFS,BFP,TET
+C-------------------------------------------------------------------
+C     RLM - Commented out in favor of explicit variable list above 10/22
+C      REAL DT
+C      REAL PXV
+C      REAL EP
+C      REAL TCI
+C      REAL ROIMP,SDRO,SSUR,SIF,BFS,BFP,TET
 
-      INTEGER IFRZE, ISC
-      REAL TA,LWE,WE,AESC  
+C      INTEGER IFRZE, ISC
+C      REAL TA,LWE,WE,AESC  
 
-      REAL LZTWM,LZFSM,LZFPM,LZSK,LZPK,LZTWC,LZFSC,LZFPC
+C      REAL LZTWM,LZFSM,LZFPM,LZSK,LZPK,LZTWC,LZFSC,LZFPC
 
 
 C     COMMON BLOCKS
-      COMMON/FSMCO1/FGCO(6),RSUM(7),PPE,PSC,PTA,PWE
-      COMMON/FSUMS1/SROT,SIMPVT,SRODT,SROST,SINTFT,SGWFP,SGWFS,SRECHT,
-     1              SETT,SE1,SE3,SE4,SE5
-
+C      COMMON/FSMCO1/FGCO(6),RSUM(7),PPE,PSC,PTA,PWE
+C      COMMON/FSUMS1/SROT,SIMPVT,SRODT,SROST,SINTFT,SGWFP,SGWFS,SRECHT,
+C     1              SETT,SE1,SE3,SE4,SE5
+C--------------------------------------------------------------------
 
 C      write(*,*) 'pars - ',UZTWM,UZFWM,UZK,PCTIM,ADIMP,RIVA,ZPERC,REXP,
 C     1           LZTWM,LZFSM,LZFPM,LZSK,LZPK,PFREE,SIDE,RSERV
@@ -80,12 +256,14 @@ C     TENSION WATER RATIO, THUS TRANSFER FREE WATER TO TENSION
       UZRAT=(UZTWC+UZFWC)/(UZTWM+UZFWM)
       UZTWC=UZTWM*UZRAT
       UZFWC=UZFWM*UZRAT
-  225 IF (UZTWC.LT.0.00001) UZTWC=0.0
-      IF (UZFWC.LT.0.00001) UZFWC=0.0
+C  225 IF (UZTWC.LT.0.00001) UZTWC=0.0
+C      IF (UZFWC.LT.0.00001) UZFWC=0.0
 C
 C     COMPUTE ET FROM THE LOWER ZONE.
 C     COMPUTE ET FROM LZTWC (E3)
-      E3=RED*(LZTWC/(UZTWM+LZTWM))
+C     RLM - removed setting low UZTWC and UZFWC values to zero. moved
+C     225 GO TO
+  225 E3=RED*(LZTWC/(UZTWM+LZTWM))
       LZTWC=LZTWC-E3
       IF(LZTWC.GE.0.0) GO TO 226
 C     E3 CAN NOT EXCEED LZTWC
@@ -107,10 +285,11 @@ C     TRANSFER FROM LZFSC TO LZTWC.
 C     IF TRANSFER EXCEEDS LZFSC THEN REMAINDER COMES FROM LZFPC
       LZFPC=LZFPC+LZFSC
       LZFSC=0.0
-  230 IF (LZTWC.LT.0.00001) LZTWC=0.0
+C  230 IF (LZTWC.LT.0.00001) LZTWC=0.0
 C
 C     COMPUTE ET FROM ADIMP AREA.-E5
-      E5=E1+(RED+E2)*((ADIMC-E1-UZTWC)/(UZTWM+LZTWM))
+C     RLM - removed setting low LZTWC values to zero, moved 230 GO TO
+  230 E5=E1+(RED+E2)*((ADIMC-E1-UZTWC)/(UZTWM+LZTWM))
 C      ADJUST ADIMC,ADDITIONAL IMPERVIOUS AREA STORAGE, FOR EVAPORATION.
       ADIMC=ADIMC-E5
       IF(ADIMC.GE.0.0) GO TO 231
@@ -301,7 +480,8 @@ C          DIRECT RUNOFF.
       ADIMC=UZTWM+LZTWM
   247 SDRO=SDRO+ADDRO*ADIMP
 C      WRITE(*,*) SDRO, ADDRO, ADIMP
-      IF (ADIMC.LT.0.00001) ADIMC=0.0
+C      RLM - removed setting low ADIMC values to zero
+C      IF (ADIMC.LT.0.00001) ADIMC=0.0
   240 CONTINUE
 C.......................................
 C     END OF INCREMENTAL DO LOOP.
@@ -353,7 +533,7 @@ C     COMPUTE TOTAL EVAPOTRANSPIRATION-TET
       SE3=SE3+E3*PAREA
       SE4=SE4+E4
       SE5=SE5+E5
-      PRINT*,'sac1 - TET: ', TET
+
 C     CHECK THAT ADIMC.GE.UZTWC
       IF (ADIMC.LT.UZTWC) ADIMC=UZTWC
 

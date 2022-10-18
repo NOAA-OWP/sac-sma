@@ -98,7 +98,7 @@ module bmi_sac_module
 
   ! Exchange items
   integer, parameter :: input_item_count = 3
-  integer, parameter :: output_item_count = 10
+  integer, parameter :: output_item_count = 11
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -160,12 +160,13 @@ contains
     output_items(2) = 'qg'      ! baseflow (mm)
     output_items(3) = 'tci'     ! total channel inflow from upstream (mm)
     output_items(4) = 'eta'     ! actual evapotranspiration (mm) 
-    output_items(5) = 'roimp'  ! impervious area runoff (mm)
-    output_items(6) = 'sdro'   ! direct runoff (mm)
-    output_items(7) = 'ssur'   ! surface runoff (mm)
-    output_items(8) = 'sif'    ! interflow (mm)
-    output_items(9) = 'bfs'    ! non-channel baseflow component (mm)
-    output_items(10) = 'bfp'    ! baseflow component (mm)
+    output_items(5) = 'roimp'   ! impervious area runoff (mm)
+    output_items(6) = 'sdro'    ! direct runoff (mm)
+    output_items(7) = 'ssur'    ! surface runoff (mm)
+    output_items(8) = 'sif'     ! interflow (mm)
+    output_items(9) = 'bfs'     ! channel baseflow component (mm)
+    output_items(10) = 'bfp'    ! channel baseflow component (mm)
+    output_items(11) = 'bfncc'  ! non-channel baseflow component (mm)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -305,7 +306,7 @@ contains
     select case(name)
     case('tair', 'precip', 'pet', &                  ! input vars
          'qs', 'qg', 'tci', 'eta',  &                ! output vars
-         'roimp','sdro','ssur','sif','bfs','bfp')
+         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
        grid = 0
        bmi_status = BMI_SUCCESS
     case default
@@ -577,7 +578,7 @@ contains
     select case(name)
     case('tair', 'precip', 'pet',  &                ! input vars
          'qs', 'qg', 'tci', 'eta', &                ! output vars
-         'roimp','sdro','ssur','sif','bfs','bfp')
+         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
        type = "real"
        bmi_status = BMI_SUCCESS
     case default
@@ -648,6 +649,9 @@ contains
        units = "mm"
        bmi_status = BMI_SUCCESS
     case("bfp")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("bfncc")
        units = "mm"
        bmi_status = BMI_SUCCESS
     case default

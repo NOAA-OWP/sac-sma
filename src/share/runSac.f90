@@ -1,4 +1,4 @@
-! module for executing Snow17 model
+! module for executing Sac model
 module runModule
   
   use namelistModule
@@ -169,20 +169,16 @@ contains
                     ! Sac Outputs
                     modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), modelvar%eta(nh), &
                     modelvar%roimp(nh), modelvar%sdro(nh), modelvar%ssur(nh), &
-                    modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh) )   
+                    modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh), modelvar%bfncc(nh) )   
                                                    
         !---------------------------------------------------------------------
-        ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
+        ! Mass balance check
         !---------------------------------------------------------------------
 
         derived%precip_sum(nh) = derived%precip_sum(nh) + forcing%precip(nh)
         derived%eta_sum(nh) = derived%eta_sum(nh) + modelvar%eta(nh)
-        derived%roimp_sum(nh) = derived%roimp_sum(nh) + modelvar%roimp(nh)
-        derived%sdro_sum(nh) = derived%sdro_sum(nh) + modelvar%sdro(nh)
-        derived%ssur_sum(nh) = derived%ssur_sum(nh) + modelvar%ssur(nh)
-        derived%sif_sum(nh) = derived%sif_sum(nh) + modelvar%sif(nh)
-        derived%bfs_sum(nh) = derived%bfs_sum(nh) + modelvar%bfs(nh)
-        derived%bfp_sum(nh) = derived%bfp_sum(nh) + modelvar%bfp(nh)
+        derived%tci_sum(nh) = derived%tci_sum(nh) + modelvar%tci(nh)
+        derived%bfncc_sum(nh) = derived%bfncc_sum(nh) + modelvar%bfncc(nh)
 
         derived%delta_uztwc_sum(nh) = derived%delta_uztwc_sum(nh) + (modelvar%uztwc(nh) - uztwc_0)
         derived%delta_uzfwc_sum(nh) = derived%delta_uzfwc_sum(nh) + (modelvar%uzfwc(nh) - uzfwc_0)
@@ -191,18 +187,26 @@ contains
         derived%delta_lzfpc_sum(nh) = derived%delta_lzfpc_sum(nh) + (modelvar%lzfpc(nh) - lzfpc_0)
         derived%delta_adimc_sum(nh) = derived%delta_adimc_sum(nh) + (modelvar%adimc(nh) - adimc_0)
 
-        derived%qs_sum(nh) = derived%roimp_sum(nh) + derived%sdro_sum(nh) + derived%ssur_sum(nh) + derived%sif_sum(nh) 
-        derived%qg_sum(nh) = derived%bfs_sum(nh) + derived%bfp_sum(nh)
         derived%delta_storage_sum(nh) = derived%delta_uztwc_sum(nh) + derived%delta_uzfwc_sum(nh) +  &
                                         derived%delta_lztwc_sum(nh) + derived%delta_lzfsc_sum(nh) +  &
-                                        derived%delta_lzfpc_sum(nh) + derived%delta_adimc_sum(nh)
-        derived%mass_balance(nh) = derived%precip_sum(nh) - derived%eta_sum(nh) -       &
-                                   derived%qs_sum(nh) - derived%qg_sum(nh) - derived%delta_storage_sum(nh)
-        dt_mass_bal = forcing%precip(nh) - modelvar%eta(nh) - (modelvar%uztwc(nh) - uztwc_0) -  &
-                      (modelvar%uzfwc(nh) - uzfwc_0) - (modelvar%lztwc(nh) - lztwc_0)  - &
-                      (modelvar%lzfsc(nh) - lzfsc_0) - (modelvar%lzfpc(nh) - lzfpc_0)  - &
-                      (modelvar%adimc(nh) - adimc_0) - modelvar%qs(nh) - modelvar%qg(nh)
-        print*, 'dt mass balance: ', dt_mass_bal
+                                        derived%delta_lzfpc_sum(nh) 
+        derived%mass_balance(nh) = derived%precip_sum(nh) - derived%eta_sum(nh) - derived%tci_sum(nh) -    &
+                                   (derived%delta_storage_sum(nh)*(1-parameters%adimp(nh)-parameters%pctim(nh))) - &
+                                   (derived%delta_adimc_sum(nh)*parameters%adimp(nh)) - derived%bfncc_sum(nh)
+    
+        if(ABS(derived%mass_balance(nh)) .GT. 1.0E-9) then
+            print*, 'WARNING: Cumulative Mass Balance Fail'
+            print*, 'HRU: ', nh
+            print*, "mass balance = ",derived%mass_balance(nh)
+        end if
+
+
+        !---------------------------------------------------------------------
+        ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
+        !---------------------------------------------------------------------
+        
+   
+        print*, 'nh, mass balance: ', nh, derived%mass_balance(nh)
 
 #ifndef NGEN_OUTPUT_ACTIVE
         call write_sac_output(namelist, runinfo, parameters, forcing, modelvar, derived, nh)

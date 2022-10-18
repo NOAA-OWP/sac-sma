@@ -7,7 +7,7 @@ C     SAC State variables  ',
      &                 UZTWC,UZFWC,LZTWC,LZFSC,LZFPC,ADIMC,
 C     SAC OUTPUTS
      &                 QS,QG,Q,ETA,
-     &                 ROIMP,SDRO,SSUR,SIF,BFS,BFP)
+     &                 ROIMP,SDRO,SSUR,SIF,BFS,BFP,BFNCC)
 
 C      IMPLICIT NONE
 
@@ -47,13 +47,14 @@ C    TURN OFF FROZEN GROUND PROCESS
 C     COMPUTE TOTAL INITIAL STORAGE
 
       TOTAL_S1 = UZTWC + UZFWC + LZTWC + LZFSC + LZFPC + ADIMC
-
+      TOTAL_S1_1 = UZTWC + UZFWC + LZTWC + LZFSC + LZFPC
 C     COMPUTE SURFACE MOISTURE FLUXES
 
       DT = DTM/86400.0
       EP1 = ETP
       P1 = PCP
       CALL SAC1(DT,P1,EP1,TCI,ROIMP,SDRO,SSUR,SIF,BFS,BFP,ETA,
+     &            BFNCC,
 C     SAC FROZEN GROUND VARIABLES
      &            IFRZE,TA,LWE,WE,ISC,AESC,
 C     SAC PARAMETERS
@@ -80,8 +81,11 @@ C
       TOTAL_S2 = UZTWC + UZFWC + LZTWC + LZFSC + LZFPC + ADIMC
       DS = (TOTAL_S2 - TOTAL_S1)
 
+      TOTAL_S2_1 = UZTWC + UZFWC + LZTWC + LZFSC + LZFPC
+      DS_1 = TOTAL_S1_1 - TOTAL_S2_1
+      BAL_1 = P1 - ETA - TCI - DS
       BAL = P1-ETA-QS-QG-DS
-      PRINT*, 'exsac1 - bal: ', BAL 
+     
 C      PRINT*,'exsac1 -',BAL,P1,ETA,Q,QS,QG,DS,TOTAL_S1,TOTAL_S2
 
       RETURN
