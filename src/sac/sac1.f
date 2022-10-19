@@ -10,8 +10,7 @@ C     SAC State variables  ',
      &                UZTWC,UZFWC,LZTWC,LZFSC,LZFPC,ADIMC)
 
 C----------------------------------------------------------------
-C      RLM - Removed comment from IMPLICIT NONE and added
-C            explicit variable/parameter list - 10/22
+C      RLM - added explicit variable/parameter list - 10/22
 
 C      IMPLICIT NONE
 

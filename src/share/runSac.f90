@@ -204,9 +204,6 @@ contains
         !---------------------------------------------------------------------
         ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
         !---------------------------------------------------------------------
-        
-   
-        print*, 'nh, mass balance: ', nh, derived%mass_balance(nh)
 
 #ifndef NGEN_OUTPUT_ACTIVE
         call write_sac_output(namelist, runinfo, parameters, forcing, modelvar, derived, nh)

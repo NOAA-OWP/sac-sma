@@ -376,7 +376,7 @@ contains
     41 FORMAT(I0.4, 3(I0.2), 20(F20.12))    ! use maximum precision (for double)
     write(runinfo%state_fileunits(n_curr_hru), 41, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
           modelvar%uztwc(n_curr_hru), modelvar%uzfwc(n_curr_hru), modelvar%lztwc(n_curr_hru), &
-          modelvar%lzfsc(n_curr_hru), modelvar%lzfpc(n_curr_hru), modelvar%adimc(n_curr_hru), modelvar%bfncc(n_curr_hru)
+          modelvar%lzfsc(n_curr_hru), modelvar%lzfpc(n_curr_hru), modelvar%adimc(n_curr_hru)
     if(ierr /= 0) then
       print*, 'ERROR writing state file information for sub-unit ', n_curr_hru; stop
     endif
