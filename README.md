@@ -12,6 +12,8 @@ Fortran compiler
 
 ## Installation and Running the Model
 
+The following describes how to install the run the Sac-SMA as a standalone model.
+
 Clone repository and set up directory
 ```
 git clone https://github.com/NOAA-OWP/sac-sma.git
@@ -77,4 +79,4 @@ If you have questions, concerns, bug reports, etc, please file an issue in this 
 
 ## References
 
-1. 
+1. Burnash, R.J.C., R.L. Ferral, R.A. McGuire. (1973). A generalized streamflow simulation system: Conceptual modeling for digital computers. US Department of Commerce, National Weather Service
