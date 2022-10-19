@@ -1,95 +1,72 @@
-#### OWP Open Source Project Template Instructions
+# Sac-SMA
 
-1. Create a new project.
-2. [Copy these files into the new project](#installation)
-3. Update the README, replacing the contents below as prescribed.
-4. Add any libraries, assets, or hard dependencies whose source code will be included
-   in the project's repository to the _Exceptions_ section in the [TERMS](TERMS.md).
-  - If no exceptions are needed, remove that section from TERMS.
-5. If working with an existing code base, answer the questions on the [open source checklist](opensource-checklist.md)
-6. Delete these instructions and everything up to the _Project Title_ from the README.
-7. Write some great software and tell people about it.
+**Description**:  A BMI enabled version of the Sacramento Soil Moisture Accounting (Sac-SMA) model.  
 
-> Keep the README fresh! It's the first thing people see and will make the initial impression.
+This version of Sac-SMA allows for multiple hydrologic response units (HRUs) to be modeled at once.  It was built to run standalone and will be expanded to be incorporated into the [ngen framework](https://github.com/NOAA-OWP/ngen).
 
-## Installation
-
-To install all of the template files, run the following script from the root of your project's directory:
-
-```
-bash -c "$(curl -s https://raw.githubusercontent.com/NOAA-OWP/owp-open-source-project-template/open_source_template.sh)"
-```
-
-----
-
-# Project Title
-
-**Description**:  Put a meaningful, short, plain-language description of what
-this project is trying to accomplish and why it matters.
-Describe the problem(s) this project solves.
-Describe how this software can improve the lives of its audience.
-
-Other things to include:
-
-  - **Technology stack**: Indicate the technological nature of the software, including primary programming language(s) and whether the software is intended as standalone or as a module in a framework or other ecosystem.
-  - **Status**:  Alpha, Beta, 1.1, etc. It's OK to write a sentence, too. The goal is to let interested people know where this project is at. This is also a good place to link to the [CHANGELOG](CHANGELOG.md).
-  - **Links to production or demo instances**
-  - Describe what sets this apart from related-projects. Linking to another doc or page is OK if this can't be expressed in a sentence or two.
-
-
-**Screenshot**: If the software has visual components, place a screenshot after the description; e.g.,
-
-![](https://raw.githubusercontent.com/NOAA-OWP/owp-open-source-project-template/master/doc/Screenshot.png)
+Primary Language: Fortran
 
 
 ## Dependencies
+Fortran compiler
 
-Describe any dependencies that must be installed for this software to work.
-This includes programming languages, databases or other storage mechanisms, build tools, frameworks, and so forth.
-If specific versions of other software are required, or known not to work, call that out.
+## Installation and Running the Model
 
-## Installation
+Clone repository and set up directory
+```
+git clone https://github.com/NOAA-OWP/sac-sma.git
+cd sac-sma
+mkdir bin
+cd build
+```
 
-Detailed instructions on how to install, configure, and get the project running.
-This should be frequently tested to ensure reliability. Alternatively, link to
-a separate [INSTALL](INSTALL.md) document.
+Define your directory paths and fortran compiler in `Makefile.local`. 
+Compiler options: pgf90, ifort, gfortran
 
-## Configuration
+```
+make -f Makefile.local
+```
 
-If the software is configurable, describe it in detail, either here or in other documentation to which you link.
+You should now see `sac.exe` in the `bin/` directory. 
 
-## Usage
+To run the example provided:
 
-Show users how to use the software.
-Be specific.
-Use appropriate formatting when showing code snippets.
+```
+cd ../test_cases/ex1/run/
+../../../bin/sac.exe namelist.bmi.HHWM8
+```
 
-## How to test the software
+## Parameters
 
-If the software includes automated tests, detail how to run those tests.
+For an [example parameter file](https://github.com/NOAA-OWP/sac-sma/tree/master/test_cases/ex1/input/params), see the test case.
 
-## Known issues
+Parameter | Description | Units
+----------|-------------|--------
+hru_id | Identification string for each hrus | -
+hru_area | Area of each HRU | * 
+uztwm | Maximum upper zone tension water | mm
+uzfwm | Maximum upper zone free water | mm
+lztwm | Maximum lower zone tension water | mm
+lzfsm | Maximum lower zone free water, secondary (aka supplemental) | mm
+lzfpm | Maximum lower zone free water, primary | mm
+adimp | Additional "impervious" area due to saturation | decimal percent
+uzk | Upper zone recession coefficient | - 
+lzpk | Lower zone recession coefficient, primary | - 
+lzsk | Lower zone recession coefficient, secondary (aka supplemental) | -
+zperc | Minimum percolation rate coefficient | - 
+rexp | Percolation equation exponent | - 
+pctim | Minimum percent impervious area | decimal percent
+pfree | Percent percolating directly to lower zone free water | decimal percent
+riva | Percent of the basin that is riparian area | decimal percent
+side | Portion of the baseflow which does not go to the stream | decimal percent
+rserv | Percent of lower zone free water not transferable to the lower zone tension water | decimal percent
 
-Document any known significant shortcomings with the software.
+<sup>*</sup> The area is used for areal averaging outputs, so the units of area are not important as long as they are consistent.
+
 
 ## Getting help
 
-Instruct users how to get help with this software; this might include links to an issue tracker, wiki, mailing list, etc.
-
-**Example**
-
 If you have questions, concerns, bug reports, etc, please file an issue in this repository's Issue Tracker.
-
-## Getting involved
-
-This section should detail why people should get involved and describe key areas you are
-currently focusing on; e.g., trying to get feedback on features, fixing certain bugs, building
-important pieces, etc.
-
-General instructions on _how_ to contribute should be stated with a link to [CONTRIBUTING](CONTRIBUTING.md).
-
-
-----
 
 ## Open source licensing info
 1. [TERMS](TERMS.md)
@@ -98,8 +75,6 @@ General instructions on _how_ to contribute should be stated with a link to [CON
 
 ----
 
-## Credits and references
+## References
 
-1. Projects that inspired you
-2. Related projects
-3. Books, papers, talks, or other sources that have meaningful impact or influence on this project
+1. 
