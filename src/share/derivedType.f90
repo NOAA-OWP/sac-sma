@@ -10,7 +10,8 @@ module derivedType
     real                               :: qs_comb, qg_comb, tci_comb, eta_comb 
     real                               :: roimp_comb, sdro_comb, ssur_comb    
     real                               :: sif_comb, bfs_comb, bfp_comb        
-    real                               :: precip_comb, tair_comb, pet_comb    
+    real                               :: precip_comb, tair_comb, pet_comb
+    real                               :: bfncc_comb    
     !variables for the mass balance check
     real, dimension(:), allocatable    :: precip_sum, eta_sum,tci_sum 
     real, dimension(:), allocatable    :: delta_uztwc_sum, delta_uzfwc_sum     
@@ -62,6 +63,7 @@ module derivedType
     this%precip_comb   = 0.0
     this%tair_comb     = 0.0
     this%pet_comb      = 0.0
+    this%bfncc_comb    = 0.0
     this%precip_sum    = 0.0
     this%eta_sum       = 0.0
     this%tci_sum       = 0.0

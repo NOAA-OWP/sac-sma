@@ -33,7 +33,7 @@ C    PCTIM    Minimum percent impervious area.  this area is always
 C                 impervious (e.g. roads)
 C    PFREE    Percent percolating directly to lower zone free water
 C    RIVA     Percent riparian area
-C    SIDE     Portion of baseflow which does *NOT* got to the stream
+C    SIDE     Portion of baseflow which does *NOT* go to the stream
 C    RSERV    Percent of lower zone free water not transferable to the
 C                 lower zone tension water
       REAL UZTWM,UZFWM,LZTWM,LZFSM,LZFPM

@@ -295,7 +295,7 @@ contains
       write(*,'("Problem opening file ''", A, "''")') trim(filename)
       stop ":  ERROR EXIT"
     endif
-    write(runinfo%output_fileunits(1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta roimp sdro ssur sif bfs bfp'   ! header
+    write(runinfo%output_fileunits(1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta roimp sdro ssur sif bfs bfp bfncc'   ! header
 
     ! if user setting is to write out information for each snowband, open the individual files
     if (namelist%output_hrus == 1) then
@@ -514,6 +514,7 @@ contains
     derived%sif_comb       = 0.0
     derived%bfs_comb       = 0.0
     derived%bfp_comb       = 0.0
+    derived%bfncc_comb     = 0.0
         
     if (n_curr_hru .eq. runinfo%n_hrus) then 
       do nh=1, runinfo%n_hrus
@@ -530,6 +531,7 @@ contains
         derived%sif_comb         = derived%sif_comb + modelvar%sif(nh) * parameters%hru_area(nh)
         derived%bfs_comb         = derived%bfs_comb + modelvar%bfs(nh) * parameters%hru_area(nh)
         derived%bfp_comb         = derived%bfp_comb + modelvar%bfp(nh) * parameters%hru_area(nh)
+        derived%bfncc_comb       = derived%bfncc_comb + modelvar%bfncc(nh) * parameters%hru_area(nh)
       end do
 
       ! take average of weighted sum of HRU areas
@@ -546,13 +548,14 @@ contains
       derived%sif_comb         = derived%sif_comb / parameters%total_area
       derived%bfs_comb         = derived%bfs_comb / parameters%total_area
       derived%bfp_comb         = derived%bfp_comb / parameters%total_area
+      derived%bfncc_comb       = derived%bfncc_comb / parameters%total_area
 
       ! -- write out combined file that is similar to each area file, but add flow variable in CFS units
       write(runinfo%output_fileunits(1), 32, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
             derived%tair_comb, derived%precip_comb, derived%pet_comb, &
             derived%qs_comb, derived%qg_comb, derived%tci_comb,derived%eta_comb, &
             derived%roimp_comb, derived%sdro_comb, derived%ssur_comb, &
-            derived%sif_comb, derived%bfs_comb, derived%bfp_comb
+            derived%sif_comb, derived%bfs_comb, derived%bfp_comb, derived%bfncc_comb
       if(ierr /= 0) then
         print*, 'ERROR writing output information for sub-unit ', n_curr_hru; stop
       endif

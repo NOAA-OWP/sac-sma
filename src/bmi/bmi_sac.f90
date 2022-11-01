@@ -707,6 +707,9 @@ contains
     case("bfp")
        size = sizeof(this%model%derived%bfp_comb)
        bmi_status = BMI_SUCCESS
+    case("bfncc")
+       size = sizeof(this%model%derived%bfncc_comb)
+       bmi_status = BMI_SUCCESS
     case default
        size = -1
        bmi_status = BMI_FAILURE
@@ -812,6 +815,9 @@ contains
        bmi_status = BMI_SUCCESS
     case("bfp")
        dest(1) = this%model%derived%bfp_comb
+       bmi_status = BMI_SUCCESS
+    case("bfncc")
+       dest(1) = this%model%derived%bfncc_comb
        bmi_status = BMI_SUCCESS
     case default
        dest(:) = -1.0
@@ -1006,6 +1012,9 @@ contains
        bmi_status = BMI_SUCCESS
     case("bfp")
        this%model%derived%bfp_comb = src(1)
+       bmi_status = BMI_SUCCESS
+    case("bfncc")
+       this%model%derived%bfncc_comb = src(1)
        bmi_status = BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE
