@@ -120,6 +120,9 @@ contains
     type (sac_type), intent (inout) :: model
 
     ! local parameters
+    real               :: prcp_mm    ! precip as a depth (for input to sac) (mm)
+    real               :: pet_mm     ! pet as a depth (for input to sac) (mm)
+
     integer            :: nh             ! counter for hrus
     real               :: uztwc_0, uzfwc_0
     real               :: lztwc_0, lzfsc_0, lzfpc_0
@@ -139,6 +142,9 @@ contains
       call read_areal_forcing(namelist, parameters, runinfo, forcing)
 #endif
 
+      prcp_mm = forcing%precip(nh)*runinfo%dt   ! convert precip input to a depth per timestep
+      pet_mm = forcing%pet(nh)*runinfo%dt       ! convert pet input to a depth per timestep
+
       !---------------------------------------------------------------------
       ! call the main sac state update routine in loop over spatial sub-units
       !---------------------------------------------------------------------
@@ -153,9 +159,9 @@ contains
         call exsac( 1, &                     ! NSOLD, which isn't used
                     real(runinfo%dt), &      ! DTM, the timestep in seconds
                     ! Forcing inputs
-                    forcing%precip(nh), &    ! liquid water input (mm)
+                    prcp_mm, &    ! liquid water input (mm)
                     forcing%tair(nh), &      ! average air temperature (C)
-                    forcing%pet(nh), &       ! potential evapotranspiration (mm)
+                    pet_mm, &       ! potential evapotranspiration (mm)
                     ! Sac parameters
                     parameters%uztwm(nh), parameters%uzfwm(nh), parameters%uzk(nh), &
                     parameters%pctim(nh), parameters%adimp(nh), parameters%riva(nh), &
@@ -175,7 +181,7 @@ contains
         ! Mass balance check
         !---------------------------------------------------------------------
 
-        derived%precip_sum(nh) = derived%precip_sum(nh) + forcing%precip(nh)
+        derived%precip_sum(nh) = derived%precip_sum(nh) + prcp_mm
         derived%eta_sum(nh) = derived%eta_sum(nh) + modelvar%eta(nh)
         derived%tci_sum(nh) = derived%tci_sum(nh) + modelvar%tci(nh)
         derived%bfncc_sum(nh) = derived%bfncc_sum(nh) + modelvar%bfncc(nh)

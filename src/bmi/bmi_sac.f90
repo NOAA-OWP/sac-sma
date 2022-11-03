@@ -142,9 +142,9 @@ contains
     character (*), pointer, intent(out) :: names(:)
     integer :: bmi_status
 
-    input_items(1) = 'tair'     ! mean air temperature (C)
-    input_items(2) = 'precip'   ! total precipitation (mm)
-    input_items(3) = 'pet'      ! potential evapotranspiration (mm) 
+    input_items(1) = 'tair'     ! mean air temperature (degC)
+    input_items(2) = 'precip'   ! total precipitation (mm/s)
+    input_items(3) = 'pet'      ! potential evapotranspiration (mm/s) 
 
     names => input_items
     bmi_status = BMI_SUCCESS
@@ -596,13 +596,13 @@ contains
 
     select case(name)
     case("precip")
-       units = "mm"
+       units = "mm/s"
        bmi_status = BMI_SUCCESS
     case("tair")
-       units = "C"
+       units = "degC"
        bmi_status = BMI_SUCCESS
     case("pet")
-       units = "mm"
+       units = "mm/s"
     case("qs")
        units = "mm"
        bmi_status = BMI_SUCCESS
