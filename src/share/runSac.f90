@@ -159,9 +159,9 @@ contains
         call exsac( 1, &                     ! NSOLD, which isn't used
                     real(runinfo%dt), &      ! DTM, the timestep in seconds
                     ! Forcing inputs
-                    prcp_mm, &    ! liquid water input (mm)
-                    forcing%tair(nh), &      ! average air temperature (C)
-                    pet_mm, &       ! potential evapotranspiration (mm)
+                    prcp_mm, &               ! liquid water input (mm)
+                    forcing%tair(nh), &      ! average air temperature (degC)
+                    pet_mm, &                ! potential evapotranspiration (mm)
                     ! Sac parameters
                     parameters%uztwm(nh), parameters%uzfwm(nh), parameters%uzk(nh), &
                     parameters%pctim(nh), parameters%adimp(nh), parameters%riva(nh), &
