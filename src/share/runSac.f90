@@ -142,13 +142,14 @@ contains
       call read_areal_forcing(namelist, parameters, runinfo, forcing)
 #endif
 
-      prcp_mm = forcing%precip(nh)*runinfo%dt   ! convert precip input to a depth per timestep
-      pet_mm = forcing%pet(nh)*runinfo%dt       ! convert pet input to a depth per timestep
-
       !---------------------------------------------------------------------
       ! call the main sac state update routine in loop over spatial sub-units
       !---------------------------------------------------------------------
       do nh=1, runinfo%n_hrus
+
+        prcp_mm = forcing%precip(nh)*runinfo%dt   ! convert precip input to a depth per timestep
+        pet_mm = forcing%pet(nh)*runinfo%dt       ! convert pet input to a depth per timestep
+
         uztwc_0 = modelvar%uztwc(nh)
         uzfwc_0 = modelvar%uzfwc(nh)
         lztwc_0 = modelvar%lztwc(nh)
@@ -200,7 +201,7 @@ contains
                                    (derived%delta_storage_sum(nh)*(1-parameters%adimp(nh)-parameters%pctim(nh))) - &
                                    (derived%delta_adimc_sum(nh)*parameters%adimp(nh)) - derived%bfncc_sum(nh)
     
-        if(ABS(derived%mass_balance(nh)) .GT. 1.0E-9) then
+        if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
             print*, 'WARNING: Cumulative Mass Balance Fail'
             print*, 'HRU: ', nh
             print*, "mass balance = ",derived%mass_balance(nh)
