@@ -204,7 +204,7 @@ contains
         if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
             print*, 'WARNING: Cumulative Mass Balance Fail'
             print*, 'HRU: ', nh
-            print*, "mass balance = ",derived%mass_balance(nh)
+            print*, "mass balance (mm) = ",derived%mass_balance(nh)
         end if
 
 
