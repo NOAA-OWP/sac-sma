@@ -1,0 +1,59 @@
+{
+    "global": {
+        "formulations": [
+            {
+                "name": "bmi_multi",
+                "params": {
+                    "model_type_name": "bmi_multi_pet_sac",
+                    "forcing_file": "",
+                    "init_config": "",
+                    "allow_exceed_end_time": true,
+                    "main_output_variable": "tci",
+                    "modules": [
+                        {
+                            "name": "bmi_c",
+                            "params": {
+                                "model_type_name": "bmi_c_pet",
+                                "library_file": "./extern/evapotranspiration/cmake_build/libpetbmi",
+                                "forcing_file": "",
+                                "init_config": "./data/bmi/c/pet/{{id}}_bmi_config.ini",
+                                "allow_exceed_end_time": true,
+                                "main_output_variable": "water_potential_evaporation_flux",
+                                "registration_function": "register_bmi_pet",
+                                "uses_forcing_file": false
+                            }
+                        },
+                        {
+                            "name": "bmi_fortran",
+                            "params": {
+                                "model_type_name": "bmi_fortran_sac",
+                                "library_file": "./extern/sac-sma/cmake_build/libsacbmi",
+                                "forcing_file": "",
+                                "init_config": "./data/bmi/fortran/sac-init-HHWM8.namelist.input",
+                                "allow_exceed_end_time": true,
+                                "main_output_variable": "tci",
+                                "variables_names_map": {
+                                    "precip": "atmosphere_water__liquid_equivalent_precipitation_rate",
+                                    "tair": "land_surface_air__temperature",
+                                    "pet": "water_potential_evaporation_flux"
+                                },
+                                "uses_forcing_file": false
+                            }
+                        }
+                    ],
+                    "uses_forcing_file": false
+                }
+            }
+        ],
+        "forcing": {
+            "file_pattern": "cat-27.csv",
+            "path": "./data/forcing/"
+        }
+    },
+    "time": {
+        "start_time": "2015-12-01 12:00:00",
+        "end_time": "2015-12-30 12:00:00",
+        "output_interval": 3600
+    }
+}    
+
