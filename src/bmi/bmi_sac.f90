@@ -603,6 +603,7 @@ contains
        bmi_status = BMI_SUCCESS
     case("pet")
        units = "mm/s"
+       bmi_status = BMI_SUCCESS
     case("qs")
        units = "mm"
        bmi_status = BMI_SUCCESS
