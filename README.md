@@ -49,7 +49,7 @@ cd ngen
 git submodule update --init --recursive
 ```
 
-Create a folder for Sac-SMA and add as a submodule.
+Add Sac-SMA as a submodule.
 ```
 git submodule add https://github.com/NOAA-OWP/sac-sma.git ./extern/sac-sma/sac-sma/
 ```
