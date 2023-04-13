@@ -49,11 +49,8 @@ cd ngen
 git submodule update --init --recursive
 ```
 
-Create a folder for Sac-SMA and add as a submodule.
+Add Sac-SMA as a submodule.
 ```
-cd extern
-mkdir sac-sma
-cd ..
 git submodule add https://github.com/NOAA-OWP/sac-sma.git ./extern/sac-sma/sac-sma/
 ```
 
@@ -67,7 +64,7 @@ Build the model.
 cmake -B extern/sac-sma/cmake_build -S extern/sac-sma
 cmake --build extern/sac-sma/cmake_build --target all
 ```
-This should create the file: /ngen/extern/sac-sma/cmake_build/libsacbmi.so.1.0.0
+This should create a library file (libsacbmi.1.0.0.dylib or libsacbmi.1.0.0.so) under /ngen/extern/sac-sma/cmake_build/
 
 Below are instructions for running an example simulation using Sac-SMA in ngen:
 Copy the necessary files to their respective folders.
@@ -101,7 +98,7 @@ make -C extern/evapotranspiration/cmake_build
 
 Run the model.
 ```
-cmake_build/ngen data/catchment_data.geojson "cat-27" ./data/nexus_data.geojson "nex-26" ./data/example_realization_w_pet_sac.json
+../cmake_build/ngen data/catchment_data.geojson "cat-27" ./data/nexus_data.geojson "nex-26" ./data/example_realization_w_pet_sac.json
 ```
 
 This should generate the files `cat-27.csv` and `nex-26_output.csv`.
