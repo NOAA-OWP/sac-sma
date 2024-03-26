@@ -1,6 +1,8 @@
-The forecast executable is generated in this ../../bin/ directory relative to this one.  
-It takes one command line argument, a namelist file. 
+The forecast executable is generated in the ../../../bin/ directory relative to this one.  
+The executable takes one command line argument, a namelist file. 
 
-Typical usage:  sac.exe [namelist filename]
+Usage:  ../../../bin/sac.exe [namelist filename]
 
 In this example, the namelist is 'namelist.bmi.HHWM8'
+
+Outputs are written in the ../output/ directory. 
