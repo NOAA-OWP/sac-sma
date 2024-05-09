@@ -66,6 +66,8 @@ cmake --build extern/sac-sma/cmake_build --target all
 ```
 This should create a library file (libsacbmi.1.0.0.dylib or libsacbmi.1.0.0.so) under /ngen/extern/sac-sma/cmake_build/
 
+**NOTE: ngen requires boost libraries.  Check that you have these and that ngen is pointing to the right location (e.g. `echo $BOOST_ROOT`).  If you do not have them, download the libraries. If you have issues with the path, explicitly define it by `export BOOST_ROOT=<path>`. For more information on building the nextgen framework, see the [ngen git repo](https://github.com/NOAA-OWP/ngen/blob/master/INSTALL.md).
+
 Below are instructions for running an example simulation using Sac-SMA in ngen:
 Copy the necessary files to their respective folders.
 ```
@@ -74,26 +76,27 @@ cp ./extern/sac-sma/sac-sma/ngen_files/sac-init-HHWM8.namelist.input ./data/bmi/
 cp ./extern/sac-sma/sac-sma/ngen_files/cat-27.csv ./data/forcing/
 ```
 
-Create a new directory in the main ngen folder to run the model and keep results.
-``` 
-mkdir sac
-cd sac
-ln -s ../data
-ln -s ../extern
-```
-
 Make and build the example.
 ```
 cmake -B extern/iso_c_fortran_bmi/cmake_build -S extern/iso_c_fortran_bmi
 make -C extern/iso_c_fortran_bmi/cmake_build
-cmake -B cmake_build -S . -DNGEN_ACTIVATE_PYTHON:BOOL=ON -DBMI_C_LIB_ACTIVE:BOOL=ON -DBMI_FORTRAN_ACTIVE:BOOL=ON
-make -C cmake_build
 
 cmake -B extern/sac-sma/cmake_build -S extern/sac-sma 
 make -C extern/sac-sma/cmake_build
 
 cmake -B extern/evapotranspiration/cmake_build -S extern/evapotranspiration/evapotranspiration
 make -C extern/evapotranspiration/cmake_build
+
+cmake -DNGEN_WITH_BMI_FORTRAN=ON -DNGEN_WITH_BMI_C=ON -DNGEN_WITH_PYTHON=ON -B cmake_build -S .
+cmake --build cmake_build --target ngen
+```
+
+Create a new directory in the main ngen folder to run the model and keep results.
+``` 
+mkdir sac
+cd sac
+ln -s ../data
+ln -s ../extern
 ```
 
 Run the model.
