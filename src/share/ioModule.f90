@@ -483,7 +483,7 @@ contains
     ! ==== WRITE output for current area simulation ====
     ! Note:  write order should match header written by open_and_init_output_files()
     
-    32 FORMAT(I4.4, 3(1x,I2.2), 20(F10.3))
+    32 FORMAT(I4.4, 3(1x,I2.2), 20(F16.10))
 
     ! if user setting is to write out information for each snowband, open the individual files
     if (namelist%output_hrus == 1 .and. runinfo%n_hrus > 1) then
