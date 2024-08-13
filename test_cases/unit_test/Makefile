@@ -111,7 +111,7 @@ bmi      = $(sac_bmi)
 #========================================================================
 # PART 4: Compile it 
 
-all: model link clean 
+all: model link 
 debug: model_debug link
 devel: model link 
 
@@ -135,11 +135,11 @@ link:
 
 
 test: $(CMD)
-	cd ../../test_cases; \
-        cd ex1/run; \ 
-	../../unit_test/sca_driver_test.exe ./namelist.bmi.HHWM8
+	cd ../ex1/run; \
+	../../unit_test/sac_driver_test.exe ./namelist.bmi.HHWM8
 
 # Remove object files
-clean:
+clean: 
 	rm -f *.o
 	rm -f *.mod
+	rm -rf $(EXE)
