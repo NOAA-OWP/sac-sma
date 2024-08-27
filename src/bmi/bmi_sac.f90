@@ -309,6 +309,11 @@ contains
          'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
        grid = 0
        bmi_status = BMI_SUCCESS
+    case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
+         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &                
+         'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv', 'hru_id') 
+       grid = 0
+       bmi_status = BMI_SUCCESS 
     case default
        grid = -1
        bmi_status = BMI_FAILURE
@@ -581,10 +586,13 @@ contains
          'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
        type = "real"
        bmi_status = BMI_SUCCESS
-    case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  &     ! parameters
+    case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
          'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &                
          'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv')
        type = "real"
+       bmi_status = BMI_SUCCESS
+    case('hru_id')
+       type = "character"
        bmi_status = BMI_SUCCESS
     case default
        type = "-"
@@ -814,6 +822,12 @@ contains
     case("rserv")
        size = sizeof(this%model%parameters%rserv(1))
        bmi_status = BMI_SUCCESS
+    case("hru_id")
+       size = sizeof(this%model%parameters%hru_id(1))
+       bmi_status = BMI_SUCCESS
+    case("hru_area")
+       size = sizeof(this%model%parameters%hru_area(1))
+       bmi_status = BMI_SUCCESS
     case default
        size = -1
        bmi_status = BMI_FAILURE
@@ -973,6 +987,8 @@ contains
     case("rserv")
        dest(1) = this%model%parameters%rserv(1)
        bmi_status = BMI_SUCCESS
+    case("hru_area")
+       dest(1) = this%model%parameters%hru_area(1)
 
     case default
        dest(:) = -1.0
@@ -1221,7 +1237,9 @@ contains
     case("rserv")
        this%model%parameters%rserv(1) = src(1)
        bmi_status = BMI_SUCCESS
-
+    case("hru_area")
+       this%model%parameters%hru_area(1) = src(1)
+       bmi_status = BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE
     end select
