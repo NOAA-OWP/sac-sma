@@ -36,6 +36,7 @@ contains
   
     ! --- now loop through parameter file and assign parameters 
     n_params_read = 0
+    ios = 0
     do while(ios .eq. 0)
       read(unit=51,FMT='(A)',IOSTAT=ios) readline
   
