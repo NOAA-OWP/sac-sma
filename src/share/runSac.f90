@@ -9,6 +9,7 @@ module runModule
   use forcingType
   use modelVarType
   use derivedType
+  use sac_log_module
 
   implicit none
 
@@ -202,6 +203,8 @@ contains
                                    (derived%delta_adimc_sum(nh)*parameters%adimp(nh)) - derived%bfncc_sum(nh)
     
         if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
+            call write_log("WARNING: Cumulative Mass Balance Fail", "WARNING")
+            call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // rtoa(derived%mass_balance(nh)), "WARNING")
             print*, 'WARNING: Cumulative Mass Balance Fail'
             print*, 'HRU: ', nh
             print*, "mass balance (mm) = ",derived%mass_balance(nh)

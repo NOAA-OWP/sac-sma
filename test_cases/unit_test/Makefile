@@ -2,6 +2,17 @@
 # Makefile to compile the Sac and driver code for multi-zone model
 #========================================================================
 
+# PART 0: Define Fortran stdlib
+#
+#
+F_MASTER_DIR = ../../
+
+STDLIB_CFLAGS := `pkg-config --cflags fortran_stdlib`
+STDLIB_LIBS := `pkg-config --libs fortran_stdlib`
+
+DATETIME_F_CFLAGS := `pkg-config --cflags datetime-fortran`
+DATETIME_F_LIBS := `pkg-config --libs datetime-fortran`
+
 #========================================================================
 # PART 1: Define directory paths and compiler
 
@@ -19,6 +30,7 @@ share_dir  = $(F_MASTER_DIR)/src/share/
 bmi_dir    = $(F_MASTER_DIR)/src/bmi/
 exe_dir    = $(F_MASTER_DIR)/bin/
 
+
 # Define the executable and path
 EXE = sac_driver_test.exe
 
@@ -29,6 +41,9 @@ FC   = gfortran
 
 #========================================================================
 # PART 2: Define the libraries and flags (can be an include file)
+
+# Include the stdlib project
+
 
 # --- Define the libraries and path to include files
 ifeq "$(FC)" "pgf90"
@@ -80,6 +95,7 @@ model_sac = $(patsubst %, $(sac_dir)/%, $(sac))
 # -- share utilities and code used by the driver in running the model
 run_util = \
 	nrtype.f90 \
+	sacLogger.f90 \
 	constants.f90 \
 	namelistModule.f90 \
         parametersType.f90 \
@@ -111,7 +127,7 @@ bmi      = $(sac_bmi)
 #========================================================================
 # PART 4: Compile it 
 
-all: model link 
+all: model link
 debug: model_debug link
 devel: model link 
 
@@ -121,17 +137,17 @@ check:
 
 # compile model code
 model:
-	$(FC) $(FLAGS77) -c $(model_sac) $(INC)
-	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_test) $(INC)
+	$(FC) $(FLAGS77) -c $(model_sac) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
+	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_test) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
 
 model_debug:
-	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(INC)
-	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_test) $(INC)
+	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
+	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_test) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
 
 # link routines
 link:
 #	$(FC) -fPIC -Bstatic_pgi -rpath,/usr/local/netcdf4-pgi/lib *.o -I./ $(LIBNETCDF) -o $(EXE)
-	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o 
+	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o  $(STDLIB_LIBS) $(DATETIME_F_LIBS)
 
 
 test: $(CMD)

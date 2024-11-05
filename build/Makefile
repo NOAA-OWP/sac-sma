@@ -9,6 +9,12 @@
 # Note:  the relative path of "../" drops into sac parent directory
 F_MASTER_DIR = ../
 
+STDLIB_CFLAGS := `pkg-config --cflags fortran_stdlib`
+STDLIB_LIBS := `pkg-config --libs fortran_stdlib`
+
+DATETIME_F_CFLAGS := `pkg-config --cflags datetime-fortran`
+DATETIME_F_LIBS := `pkg-config --libs datetime-fortran`
+
 # Location of the compiled modules
 # MOD_PATH = $(F_MASTER_DIR)/build/ -- not used
 
@@ -80,6 +86,7 @@ model_sac = $(patsubst %, $(sac_dir)/%, $(sac))
 # -- share utilities and code used by the driver in running the model
 run_util = \
 	nrtype.f90 \
+	sacLogger.f90 \
 	constants.f90 \
 	namelistModule.f90 \
         parametersType.f90 \
@@ -87,6 +94,7 @@ run_util = \
         dateTimeUtilsModule.f90 \
         runInfoType.f90 \
         modelVarType.f90 \
+        derivedType.f90\
         ioModule.f90 \
         runSac.f90 
 
@@ -120,17 +128,17 @@ check:
 
 # compile model code
 model:
-	$(FC) $(FLAGS77) -c $(model_sac) $(INC)
-	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
+	$(FC) $(FLAGS77) -c $(model_sac) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
+	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
 
 model_debug:
-	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(INC)
-	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
+	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
+	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
 
 # link routines
 link:
 #	$(FC) -fPIC -Bstatic_pgi -rpath,/usr/local/netcdf4-pgi/lib *.o -I./ $(LIBNETCDF) -o $(EXE)
-	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o 
+	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o $(STDLIB_LIBS) $(DATETIME_F_LIBS)
 
 # Remove object files
 clean:
