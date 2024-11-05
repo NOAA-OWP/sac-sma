@@ -2,6 +2,7 @@
 ! copied from the GMET code at https://github.com/NCAR/GMET/
 
 module dateTimeUtilsModule
+  use sac_log_module
 
   implicit none
   public
@@ -88,6 +89,7 @@ contains
       if (len_trim(str) == 0) exit
       nargs = nargs + 1
       if(nargs .gt. size(args)) then
+        call write_log("Number of predictors larger than expected, check nPredict. STOPPING..", "ERROR")
         print *,'Number of predictors larger than expected, check nPredict'
         stop
       end if
@@ -887,6 +889,10 @@ contains
     
     if (error /= 0) then
       date_to_unix = -9999.99
+      call write_log("error in date_to_unix -- date, year, month, day, hour, min, sec, error:.", "ERROR")
+      !call write_log(date // ',' // year // ',' // month // ',' // day // ',' // hour // ',' //  min // ',' // sec // ',' // error,
+      !"ERROR"))
+      call write_log("STOPPING...", "ERROR")
       print*, 'error in date_to_unix -- date, year, month, day, hour, min, sec, error:'
       print*, date, year, month, day, hour, min, sec, error
       stop !return
@@ -1007,6 +1013,8 @@ contains
     real*8                            :: utime
 
     if(abs(mod(end_datetime - start_datetime, dt)) > 1e-5) then
+      call write_log("start and end datetimes are not an even multiple of dt -- check dates in namelist", "ERROR")
+      call write_log("STOPPING..", "ERROR")
       print*, 'start and end datetimes are not an even multiple of dt -- check dates in namelist' 
       print*, 'end_datetime, start_datetime, dt, mod:', end_datetime, start_datetime, dt, mod(end_datetime-start_datetime, dt) 
       stop 

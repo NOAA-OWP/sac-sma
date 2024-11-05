@@ -86,7 +86,6 @@ program sac_driver_test
     print*, "Initializing..."
     call get_command_argument(1, arg)
     status = m%initialize(arg)
-
   !---------------------------------------------------------------------
   ! Get model information
   ! component_name and input/output_var
