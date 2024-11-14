@@ -118,6 +118,7 @@ contains
 
   ! == Routing to run the model for one timestep and all spatial sub-units ================================
   SUBROUTINE solve_sac(model)
+    implicit none
     type (sac_type), intent (inout) :: model
 
     ! local parameters
@@ -129,6 +130,8 @@ contains
     real               :: lztwc_0, lzfsc_0, lzfpc_0
     real               :: adimc_0
     real               :: dt_mass_bal
+    character(50)      :: str_real
+
     associate(namelist   => model%namelist,   &
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
@@ -204,10 +207,13 @@ contains
     
         if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
             call write_log("WARNING: Cumulative Mass Balance Fail", "WARNING")
-            call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // rtoa(derived%mass_balance(nh)), "WARNING")
             print*, 'WARNING: Cumulative Mass Balance Fail'
             print*, 'HRU: ', nh
             print*, "mass balance (mm) = ",derived%mass_balance(nh)
+
+            write(str_real, '(f20.10)' ) derived%mass_balance(nh)
+            call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // str_real, "WARNING")
+            !call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // rtoa(derived%mass_balance(nh)), "WARNING")
         end if
 
 
