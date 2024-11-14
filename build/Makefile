@@ -9,12 +9,6 @@
 # Note:  the relative path of "../" drops into sac parent directory
 F_MASTER_DIR = ../
 
-STDLIB_CFLAGS := `pkg-config --cflags fortran_stdlib`
-STDLIB_LIBS := `pkg-config --libs fortran_stdlib`
-
-DATETIME_F_CFLAGS := `pkg-config --cflags datetime-fortran`
-DATETIME_F_LIBS := `pkg-config --libs datetime-fortran`
-
 # Location of the compiled modules
 # MOD_PATH = $(F_MASTER_DIR)/build/ -- not used
 
@@ -24,6 +18,7 @@ sac_dir    = $(F_MASTER_DIR)/src/sac/
 share_dir  = $(F_MASTER_DIR)/src/share/
 bmi_dir    = $(F_MASTER_DIR)/src/bmi/
 exe_dir    = $(F_MASTER_DIR)/bin/
+fdatetime_dir = $(F_MASTER_DIR)../../datetime-fortran-1.7.0/src
 
 # Define the executable and path
 EXE = $(exe_dir)/sac.exe
@@ -53,8 +48,8 @@ endif
 ifeq "$(FC)" "gfortran"
   FLAGS_DEBUG  = -static -Wall -g -ffree-line-length-none -cpp -fcheck=all
   FLAGS_DEBUG77 = -static -std=legacy -Wall -g -ffree-line-length-none -cpp -fcheck=all
-  FLAGS = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
-  FLAGS77 = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
+  FLAGS = -O3 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
+  FLAGS77 = -O3 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
 endif
 
 ifeq "$(FC)" "ifort"
@@ -98,6 +93,10 @@ run_util = \
         ioModule.f90 \
         runSac.f90 
 
+fdatetime_util = datetime_module.f90
+
+fdatetime = $(patsubst %, $(fdatetime_dir)/%, $(fdatetime_util))
+
 model_run = $(patsubst %, $(share_dir)/%, $(run_util))
 
 # --- BMI functions used by the driver to run the model
@@ -128,17 +127,17 @@ check:
 
 # compile model code
 model:
-	$(FC) $(FLAGS77) -c $(model_sac) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
-	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
+	$(FC) $(FLAGS77) -c $(model_sac) $(fdatetime) $(INC)
+	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
 
 model_debug:
-	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
-	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC) $(STDLIB_CFLAGS) $(DATETIME_F_CFLAGS)
+	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(fdatetime) $(INC)
+	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
 
 # link routines
 link:
 #	$(FC) -fPIC -Bstatic_pgi -rpath,/usr/local/netcdf4-pgi/lib *.o -I./ $(LIBNETCDF) -o $(EXE)
-	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o $(STDLIB_LIBS) $(DATETIME_F_LIBS)
+	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o
 
 # Remove object files
 clean:
