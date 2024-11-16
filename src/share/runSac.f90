@@ -206,14 +206,14 @@ contains
                                    (derived%delta_adimc_sum(nh)*parameters%adimp(nh)) - derived%bfncc_sum(nh)
     
         if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
-            call write_log("WARNING: Cumulative Mass Balance Fail", "WARNING")
+            call write_log("WARNING: Cumulative Mass Balance Fail", "WARN")
             print*, 'WARNING: Cumulative Mass Balance Fail'
             print*, 'HRU: ', nh
             print*, "mass balance (mm) = ",derived%mass_balance(nh)
 
             write(str_real, '(f20.10)' ) derived%mass_balance(nh)
-            call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // str_real, "WARNING")
-            !call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // rtoa(derived%mass_balance(nh)), "WARNING")
+            call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // str_real, "WARN")
+            !call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // rtoa(derived%mass_balance(nh)), "WARN")
         end if
 
 

@@ -4,11 +4,11 @@
   character(128) :: errmsg, message
   character(256) :: iomsg
   integer :: iostat, unit, stat
-  character(128) :: log_file_name
-
+  character(:), allocatable :: log_file_name
+  ! Set Default Log Level: INFO=20, DEBUG=10, WARN=30, ERROR=40, FATAL=50
+  integer :: default_log_level=20
 
   contains
-
 
   function itoa(i) result(res)
     ! This function convrets an integer to ascii format 
@@ -22,14 +22,15 @@
     res = trim(tmp)
   end function
 
+  
   function rtoa(i) result(res)
     ! This function convrets a real value to ascii format 
 
-    character(128) :: res
+    character(:),allocatable :: res
     real,intent(in) :: i
-    character*20 format
+    character(128) format
 
-    data format /'(F20.10)'/
+    data format /'(F10.10)'/
     write(res,format)i
     res = trim(res)
   end function
@@ -45,7 +46,8 @@
     write(res,format)i
     res = trim(res)
   end function
- 
+
+
   subroutine get_utc_time(time_stamp)
     ! This function returns the present time (now) in utc format
     
@@ -72,7 +74,7 @@
       zone_val = -1.0 * zone_val
     end if
 
-    read(date(1:4), '(I10)') year_val
+    read(date(1:4), '(I4)') year_val
     read(date(5:6), '(I10)') month_val
     read(date(7:8), '(I10)') day_val
     read (time(1:2), '(I10)') hr_val
@@ -82,7 +84,7 @@
 
     a = datetime(year=year_val, month=month_val, day=day_val, hour=hr_val, minute=min_val, second=sec_val, millisecond=ms_val, tz=zone_val)
     a = a % utc()
-    time_stamp = a % isoformat()
+    time_stamp = trim(a % isoformat())
   end subroutine get_utc_time
 
 
@@ -175,71 +177,86 @@
   end subroutine get_utc_time_manual
 
 
-  subroutine get_log_level(log_level, level) 
+  subroutine get_log_level(log_level_str, log_level) 
     ! This function returns log level needed by fortran stdlib 
 
     implicit none
-    integer, intent(out) :: level
-    character(8), intent(in) :: log_level
+    integer, intent(out) :: log_level
+    ! character(20), intent(in) :: log_level_str
+    character(len=*), intent(in) :: log_level_str
 
-    if (log_level == "INFO") then
-      level = 20
-    else if (log_level == "WARNING") then
-      level = 30
-    else if (log_level == "DEBUG") then
-      level = 10
-    else if (log_level == "ERROR") then
-      level = 40
+    if (trim(log_level_str) == "INFO") then
+      log_level = 20
+    else if (trim(log_level_str) == "WARN") then
+      log_level = 30
+    else if (trim(log_level_str) == "DEBUG") then
+      log_level = 10
+    else if (trim(log_level_str) == "ERROR") then
+      log_level = 40
+    else if (trim(log_level_str) == "FATAL") then
+      log_level = 50
     else
-      level = 20
+      log_level = 20
     end if
   end subroutine get_log_level
 
 
-  subroutine create_logger(log_level)
-    ! This is the main function that creates and initialise the log file
-
+  subroutine get_log_file_name()
     implicit none
-    character(100) :: log_file_path
+    character(128) :: temp_path
+    character(255) :: log_file_path
     character(255) :: cwd
-    character(8), intent(in), optional :: log_level
-    character(8) :: this_log_level
     character(23) :: time_stamp
     integer :: status
-    integer :: level
     logical :: exist
-
-    ! set the default log level
-    if (present(log_level)) then
-      this_log_level = log_level
-    else
-      this_log_level = "INFO"
-    end if
-    call get_log_level(this_log_level, level)
 
     ! Determin log file location
     call get_environment_variable("NGEN_LOG_FILE_PATH", log_file_path)
     write (*,*) trim(log_file_path)
 
     call get_utc_time(time_stamp)
-    print*, time_stamp
 
     if (trim(adjustl(log_file_path)) == "") then
       print*, "log_file_path not found in env. Using local log file path"
       call getcwd(cwd, status)
       if (status == 0) then
         print *, 'Current working directory: ', trim(cwd)
-        log_file_path = trim(cwd)//'/' //'run_log/' //time_stamp(1:10)
-        CALL system("mkdir -p " // log_file_path)
-        log_file_name = trim(log_file_path)// '/' // 'sac_log_' // time_stamp(12:13)//time_stamp(15:16)//time_stamp(18:19)//'.txt'
+        temp_path = trim(cwd)//'/' //'run_log/' //time_stamp(1:10)
+        CALL system("mkdir -p " // temp_path)
+        log_file_path = trim(temp_path)// '/' // 'sac_log_' // time_stamp(12:13)//time_stamp(15:16)//time_stamp(18:19)//'.txt'
+        print*, "log_file_path : "//log_file_path
       else
         print *, 'Error retrieving current directory'
         stop
       end if
-    else
-      log_file_name = trim(log_file_path)
     end if
 
+
+    if (len_trim(log_file_name) == 0) then
+      allocate(character(len(trim(log_file_path))) :: log_file_name)
+    end if
+    log_file_name = trim(log_file_path)
+  end subroutine get_log_file_name
+
+
+  subroutine create_logger(log_level_str)
+    ! This is the main function that creates and initialise the log file
+
+    implicit none
+    character(len=*), intent(in), optional :: log_level_str
+    integer :: status
+    logical :: exist
+    integer :: log_level
+
+    ! set the default log level
+    if (present(log_level_str)) then
+      call get_log_level(log_level_str, log_level)
+      default_log_level = log_level
+    end if
+
+    if(len_trim(log_file_name) == 0) then
+      call get_log_file_name()
+    end if
 
     print *, 'log file name: ' // log_file_name
     inquire(file=log_file_name, exist=exist)
@@ -249,29 +266,38 @@
   end subroutine create_logger
 
 
-  subroutine write_log(msg, msg_type)
+  subroutine write_log(msg, log_level_str)
    !this subroutine writes the log message to the log file
 
    implicit none 
    character(len=*), intent(in)        :: msg
-   character(len=*), intent(in)        :: msg_type
+   character(len=*), intent(in)        :: log_level_str
    character(len=23) :: utc_time
    character(len=128) :: log_msg
+   integer :: log_level
 
    logical :: exist
 
+   call get_log_level(log_level_str, log_level)
+   if (log_level < default_log_level) return
+
    ! get the present time and create the message that will be sent to the log file
    call get_utc_time(utc_time)
-   log_msg = utc_time // " SACSMA " //  msg_type // " " //    msg
+   log_msg = trim(utc_time) //achar(9) // "SACSMA"//achar(9)//  log_level_str // achar(9)// msg
+   if(len_trim(log_file_name) == 0) then
+     call get_log_file_name()
+     print *, 'log file name: ' // log_file_name
+   end if
 
+   
    inquire(file=log_file_name, exist=exist)
    if (exist) then
     open(12, file=log_file_name, status="old", position="append", action="write")
-  else
+   else
     open(12, file=log_file_name, status="new", action="write")
   end if
 
-  write(12, *) log_msg
+  write(12, '(A)')trim(log_msg)
   close(12)
 
   end subroutine write_log
