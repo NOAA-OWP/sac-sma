@@ -18,6 +18,7 @@ sac_dir    = $(F_MASTER_DIR)/src/sac/
 share_dir  = $(F_MASTER_DIR)/src/share/
 bmi_dir    = $(F_MASTER_DIR)/src/bmi/
 exe_dir    = $(F_MASTER_DIR)/bin/
+fdatetime_dir = $(F_MASTER_DIR)../../datetime-fortran-1.7.0/src
 
 # Define the executable and path
 EXE = $(exe_dir)/sac.exe
@@ -47,8 +48,8 @@ endif
 ifeq "$(FC)" "gfortran"
   FLAGS_DEBUG  = -static -Wall -g -ffree-line-length-none -cpp -fcheck=all
   FLAGS_DEBUG77 = -static -std=legacy -Wall -g -ffree-line-length-none -cpp -fcheck=all
-  FLAGS = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
-  FLAGS77 = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
+  FLAGS = -O3 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
+  FLAGS77 = -O3 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
 endif
 
 ifeq "$(FC)" "ifort"
@@ -80,6 +81,7 @@ model_sac = $(patsubst %, $(sac_dir)/%, $(sac))
 # -- share utilities and code used by the driver in running the model
 run_util = \
 	nrtype.f90 \
+	sacLogger.f90 \
 	constants.f90 \
 	namelistModule.f90 \
         parametersType.f90 \
@@ -87,8 +89,13 @@ run_util = \
         dateTimeUtilsModule.f90 \
         runInfoType.f90 \
         modelVarType.f90 \
+        derivedType.f90\
         ioModule.f90 \
         runSac.f90 
+
+fdatetime_util = datetime_module.f90
+
+fdatetime = $(patsubst %, $(fdatetime_dir)/%, $(fdatetime_util))
 
 model_run = $(patsubst %, $(share_dir)/%, $(run_util))
 
@@ -120,17 +127,17 @@ check:
 
 # compile model code
 model:
-	$(FC) $(FLAGS77) -c $(model_sac) $(INC)
+	$(FC) $(FLAGS77) -c $(model_sac) $(fdatetime) $(INC)
 	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
 
 model_debug:
-	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(INC)
+	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(fdatetime) $(INC)
 	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
 
 # link routines
 link:
 #	$(FC) -fPIC -Bstatic_pgi -rpath,/usr/local/netcdf4-pgi/lib *.o -I./ $(LIBNETCDF) -o $(EXE)
-	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o 
+	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o
 
 # Remove object files
 clean:

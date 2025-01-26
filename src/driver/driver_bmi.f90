@@ -19,7 +19,8 @@ program multi_driver
   use bmi_sac_module
   use bmif_2_0
   use dateTimeUtilsModule
- 
+  use sac_log_module
+
   implicit none
 
   !---------------------------------------------------------------------
@@ -39,6 +40,7 @@ program multi_driver
   character(len=10)     :: start_datehr      ! Start date of the model run ( YYYYMMDDHH ) 
   character(len=10)     :: end_datehr        ! End date of the model run ( YYYYMMDDHH ) 
   character(len=10)     :: curr_datehr       ! Current date of the model run ( YYYYMMDDHH ) 
+
 
   !---------------------------------------------------------------------
   !  Initialize
