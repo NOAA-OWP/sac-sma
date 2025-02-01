@@ -2,12 +2,18 @@
 # Makefile to compile the Sac and driver code for multi-zone model
 #========================================================================
 
+# PART 0: Define Fortran stdlib
+#
+#
+F_MASTER_DIR = ../../
+DATETIME_FORTRAN_INSTALLATION_DIR=../../../../../extern
+fdatetime_dir = $(DATETIME_FORTRAN_INSTALLATION_DIR)/datetime-fortran-1.7.0/src/
+
 #========================================================================
 # PART 1: Define directory paths and compiler
 
 # Define main/top directory (parent of /build/)
 # Note:  the relative path of "../" drops into sac parent directory
-F_MASTER_DIR = ../../
 
 # Location of the compiled modules
 # MOD_PATH = $(F_MASTER_DIR)/build/ -- not used
@@ -19,6 +25,7 @@ share_dir  = $(F_MASTER_DIR)/src/share/
 bmi_dir    = $(F_MASTER_DIR)/src/bmi/
 exe_dir    = $(F_MASTER_DIR)/bin/
 
+
 # Define the executable and path
 EXE = sac_driver_test.exe
 
@@ -29,6 +36,9 @@ FC   = gfortran
 
 #========================================================================
 # PART 2: Define the libraries and flags (can be an include file)
+
+# Include the stdlib project
+
 
 # --- Define the libraries and path to include files
 ifeq "$(FC)" "pgf90"
@@ -47,9 +57,12 @@ endif
 ifeq "$(FC)" "gfortran"
   FLAGS_DEBUG  = -static -Wall -g -ffree-line-length-none -cpp -fcheck=all
   FLAGS_DEBUG77 = -static -std=legacy -Wall -g -ffree-line-length-none -cpp -fcheck=all
-  FLAGS = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
+  # FLAGS = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
   FLAGS77 = -O3 -fdefault-real-8 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
+  FLAGS = -O3 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
+  FLAGS2 = -O3 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
 endif
+
 
 ifeq "$(FC)" "ifort"
   FLAGS_PROF = -static -debug -warn all -check all -FR -O0 -auto -WB -traceback -g -fltconsistency -fpe0
@@ -80,6 +93,7 @@ model_sac = $(patsubst %, $(sac_dir)/%, $(sac))
 # -- share utilities and code used by the driver in running the model
 run_util = \
 	nrtype.f90 \
+	sacLogger.f90 \
 	constants.f90 \
 	namelistModule.f90 \
         parametersType.f90 \
@@ -97,6 +111,10 @@ model_run = $(patsubst %, $(share_dir)/%, $(run_util))
 bmi_functions = bmi.f90 bmi_sac.f90
 sac_bmi    = $(patsubst %, $(bmi_dir)/%, $(bmi_functions))
 
+
+fdatetime_code = datetime_module.f90
+fdatetime = $(patsubst %, $(fdatetime_dir)/%, $(fdatetime_code))
+
 # --- sac driver
 unit_test_sac = sac_driver_test.f90
 sac_test    = $(patsubst %, $(unit_test_dir)/%, $(unit_test_sac))
@@ -111,7 +129,7 @@ bmi      = $(sac_bmi)
 #========================================================================
 # PART 4: Compile it 
 
-all: model link 
+all: model link
 debug: model_debug link
 devel: model link 
 
@@ -121,17 +139,26 @@ check:
 
 # compile model code
 model:
-	$(FC) $(FLAGS77) -c $(model_sac) $(INC)
-	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_test) $(INC)
+	# $(FC) $(FLAGS77) -c $(model_sac) $(INC) $(DATETIME_F_CFLAGS)
+	# $(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_test) $(INC) $(DATETIME_F_CFLAGS)
+
+	$(FC) $(FLAGS2) -c $(model_sac) $(fdatetime) $(INC)
+	$(FC) $(FLAGS) -c $(run_code) $(sac_bmi) $(sac_test) $(INC)
+
 
 model_debug:
-	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(INC)
-	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_test) $(INC)
+	#$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(INC) $(DATETIME_F_CFLAGS)
+	#$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_test) $(INC) $(DATETIME_F_CFLAGS)
+	$(FC) $(FLAGS2) -g -fcheck=all -c $(model_sac) $(fdatetime) $(INC)
+	$(FC) $(FLAGS) -g -fcheck=all -c $(run_code) $(sac_bmi) $(sac_test) $(INC)
+
 
 # link routines
 link:
 #	$(FC) -fPIC -Bstatic_pgi -rpath,/usr/local/netcdf4-pgi/lib *.o -I./ $(LIBNETCDF) -o $(EXE)
-	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o 
+
+	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o
+
 
 
 test: $(CMD)
