@@ -247,22 +247,30 @@
     integer :: status
     logical :: exist
     integer :: log_level
+    character(8) :: this_log_level_str
 
     ! set the default log level
-    if (present(log_level_str)) then
-      call get_log_level(log_level_str, log_level)
+    call get_environment_variable("sac-sma_ll", this_log_level_str)
+    if (trim(adjustl(this_log_level_str)) == "") then
+      print*, "Log level not found in environment variable, will use default log level"
+    else
+      print*, "Log level found in environment : " //this_log_level_str
+      call get_log_level(trim(adjustl(this_log_level_str)), log_level)
       default_log_level = log_level
     end if
+
+    print*, "Default log level :", default_log_level
+
 
     if(len_trim(log_file_name) == 0) then
       call get_log_file_name()
     end if
 
     print *, 'log file name: ' // log_file_name
-    inquire(file=log_file_name, exist=exist)
-    if (exist) then
-            print *, 'log file already exists'
-    end if
+    !inquire(file=log_file_name, exist=exist)
+    !if (exist) then
+    !        print *, 'log file already exists'
+    !end if
   end subroutine create_logger
 
 
