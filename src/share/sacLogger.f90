@@ -250,7 +250,7 @@
     character(8) :: this_log_level_str
 
     ! set the default log level
-    call get_environment_variable("sac-sma_ll", this_log_level_str)
+    call get_environment_variable("SACSMA_LOGLEVEL", this_log_level_str)
     if (trim(adjustl(this_log_level_str)) == "") then
       print*, "Log level not found in environment variable, will use default log level"
     else
