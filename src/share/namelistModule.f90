@@ -64,19 +64,19 @@ contains
     integer :: ios
     
     print*, 'Reading namelist'
-    call write_log("Reading namelist", "INFO")
+    call write_log("Reading namelist", LOG_LEVEL_INFO)
 
     ! -- open and read namelist file
     open(33, file=namelist_file, form="formatted", IOSTAT=ios)
     if (ios /= 0) then
-      call write_log('Error opening namelist file ' // namelist_file, "FATAL")
+      call write_log('Error opening namelist file ' // namelist_file, LOG_LEVEL_FATAL)
     end if
 
     read(33, SAC_CONTROL)
     close(33)
     
     print*, ' -- simulating basin ', main_id, ' with ', n_hrus, ' hrus'
-    call write_log('-- simulating basin ' //  main_id // ' with ' //  itoa(n_hrus) // ' hrus', "INFO")
+    call write_log('-- simulating basin ' //  main_id // ' with ' //  itoa(n_hrus) // ' hrus', LOG_LEVEL_INFO)
 
     ! -- transfer to namelist datatype
     this%main_id             = main_id
@@ -96,7 +96,7 @@ contains
     ! -- namelist entry checks --
     if (this%warm_start_run .eq. 1 .and. this%write_states .eq. 1) then
       this%write_states = 0
-      call write_log('cannot read and write state files at the same time.  Setting write_states option to 0 and continuing',"WARN")
+      call write_log('cannot read and write state files at the same time.  Setting write_states option to 0 and continuing',LOG_LEVEL_SEVERE)
       print*, ' -- WARNING: cannot read and write state files at the same time.  Setting write_states option to 0 and continuing'
     endif
 
