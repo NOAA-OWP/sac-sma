@@ -1,313 +1,361 @@
- module sac_log_module
+module sac_log_module
+   implicit none
+   private
+   public :: write_log, is_logger_enabled, get_log_level, itoa, rtoa, r8toa
+   public :: LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARNING, LOG_LEVEL_SEVERE, LOG_LEVEL_FATAL
 
-  implicit none      
-  character(128) :: errmsg, message
-  character(256) :: iomsg
-  integer :: iostat, unit, stat
-  character(:), allocatable :: log_file_name
-  ! Set Default Log Level: INFO=20, DEBUG=10, WARN=30, ERROR=40, FATAL=50
-  integer :: default_log_level=20
+   ! Log levels (made public so other modules can use them)
+   integer, parameter :: LOG_LEVEL_DEBUG = 1
+   integer, parameter :: LOG_LEVEL_INFO = 2
+   integer, parameter :: LOG_LEVEL_WARNING = 3
+   integer, parameter :: LOG_LEVEL_SEVERE = 4
+   integer, parameter :: LOG_LEVEL_FATAL = 5
 
-  contains
+   integer :: log_level = LOG_LEVEL_INFO
 
-  function itoa(i) result(res)
-    ! This function convrets an integer to ascii format 
+   character(len=1024) :: log_file_path
+   integer :: log_unit = 12
+   logical :: logging_enabled = .false.
+   logical :: opened_once = .false.
+   logical :: logger_initialized = .false.   ! Flag to track if the logger has been initialized
 
-    implicit none      
-    !class (sacLogger), intent(in) :: this
-    character(:),allocatable :: res
-    integer,intent(in) :: i
-    character(range(i)+2) :: tmp
-    write(tmp,'(i0)') i
-    res = trim(tmp)
-  end function
+   ! Constants character(len=1), parameter :: DS = "/"
+   character(len=16), parameter :: MODULE_NAME = "Sac-SMA"
+   character(len=14), parameter :: LOG_DIR_NGENCERF = "/ngencerf/data"
+   character(len=8),  parameter :: LOG_DIR_DEFAULT = "run-logs"
+   character(len=3),  parameter :: LOG_FILE_EXT = "log"
+   character(len=1),  parameter :: DS = "/"
+   character(len=17), parameter :: EV_EWTS_LOGGING = "NGEN_EWTS_LOGGING"
+   character(len=18), parameter :: EV_NGEN_LOGFILEPATH = "NGEN_LOG_FILE_PATH"
+   character(len=19), parameter :: EV_MODULE_LOGFILEPATH = "SACSMA_LOGFILEPATH"
+   character(len=16), parameter :: EV_MODULE_LOGLEVEL = "SACSMA_LOGLEVEL"
+   character(len=7),  parameter :: log_module_name = "SACSMA"
+   integer, parameter           :: LOG_MODULE_NAME_LEN = 8  ! // Width of module name for log entries
+   integer, parameter           :: LOG_ENTRY_LEVEL_LEN = 7  ! // Width of log level for log entries
 
-  
-  function rtoa(i) result(res)
-    ! This function convrets a real value to ascii format 
+contains
 
-    character(:),allocatable :: res
-    real,intent(in) :: i
-    character(128) format
+   subroutine initialize_logger()
+      character(len=256) :: log_env, log_msg
+      character(len=8) :: log_str
+      integer :: save_log_level
 
-    data format /'(F10.10)'/
-    write(res,format)i
-    res = trim(res)
-  end function
-
-  function r8toa(i) result(res)
-    ! This function convrets a real value to ascii format
-
-    character(128) :: res
-    real(KIND=8),intent(in) :: i
-    character(128) format
-
-    data format /'(F10.10)'/
-    write(res,format)i
-    res = trim(res)
-  end function
-
-
-  subroutine get_utc_time(time_stamp)
-    ! This function returns the present time (now) in utc format
-    
-    use datetime_module, only:datetime
-    implicit none
-
-    character(23), intent(out) :: time_stamp
-    character(len=5)  :: zone
-    integer ::  hr_zone_val
-    integer ::  min_zone_val
-    integer :: dt(8)
-    integer :: year_val, month_val, day_val, hr_val, min_val, sec_val, ms_val
-    character(8)  :: date
-    character(10) :: time
-    double precision :: zone_val
-    type(datetime) :: a
-
-    call date_and_time(values=dt, date=date, time=time, zone=zone)
-
-    read (zone(2:3), '(I10)') hr_zone_val
-    read (zone(4:5), '(I10)') min_zone_val
-    zone_val = hr_zone_val + (min_zone_val/60)
-    if (zone(1:1) == "-") then
-      zone_val = -1.0 * zone_val
-    end if
-
-    read(date(1:4), '(I4)') year_val
-    read(date(5:6), '(I10)') month_val
-    read(date(7:8), '(I10)') day_val
-    read (time(1:2), '(I10)') hr_val
-    read (time(3:4), '(I10)') min_val
-    read (time(5:6), '(I10)') sec_val
-    read (time(8:10), '(I10)') ms_val
-
-    a = datetime(year=year_val, month=month_val, day=day_val, hour=hr_val, minute=min_val, second=sec_val, millisecond=ms_val, tz=zone_val)
-    a = a % utc()
-    time_stamp = trim(a % isoformat())
-  end subroutine get_utc_time
-
-
-  subroutine get_utc_time_manual(time_stamp)
-    !! Returns current date and time in UTC format. Same as get_utc_time, but does not use datetime lib
-    
-    implicit none
-    character(len=5)  :: zone
-    integer :: hr_time_val, hr_zone_val
-    integer :: min_time_val, min_zone_val
-    integer :: dt(8)
-    integer :: year_val, month_val, day_val, hr_val, min_val, feb_max_day, max_day_month
-    character(23), intent(out) :: time_stamp
-    character(8)  :: date
-    character(10) :: time
-    integer, allocatable :: days_of_months(:)
-
-    call date_and_time(values=dt, date=date, time=time, zone=zone)
-    ! print*, "values : ", dt
-
-    read (zone(2:3), '(I10)') hr_zone_val
-    read (zone(4:5), '(I10)') min_zone_val
-    
-    read(date(1:4), '(I10)') year_val
-    read(date(5:6), '(I10)') month_val
-    read(date(7:8), '(I10)') day_val
-    read (time(1:2), '(I10)') hr_time_val
-    read (time(3:4), '(I10)') min_time_val
-
-    feb_max_day = 28+(1-min(1,mod(year_val,4)))
-    allocate(days_of_months(12))
-    days_of_months = (/31,feb_max_day,31,30,31,30,31,31,30,31,30,31/)
-
-    if (zone(1:1) == "-") then
-        min_val = min_time_val + min_zone_val
-        hr_val = hr_time_val + hr_zone_val
-    else
-        min_val = min_time_val - min_zone_val
-        hr_val = hr_time_val - hr_zone_val
-    end if
-
-    if (min_val >= 60) then
-      min_val = min_val - 60
-      hr_val = hr_val +1
-    else if (min_val < 0) then
-      min_val = min_val + 60
-      hr_val = hr_val -1  
-    end if
-
-    if (hr_val >= 24) then
-      hr_val = hr_val -24
-      day_val = day_val + 1
-    else if (hr_val < 0) then
-      hr_val = hr_val + 24
-      day_val = day_val - 1
-    end if
-
-    max_day_month = days_of_months(month_val)
-    if (day_val > max_day_month) then
-      day_val = day_val - max_day_month
-      month_val = month_val + 1
-    else if (day_val < 0) then
-      day_val = day_val + max_day_month
-      month_val = month_val - 1
-    end if
-
-    if (month_val > 12) then
-      month_val = month_val - 12
-      year_val = year_val + 1
-    else if (month_val < 0) then
-      month_val = month_val + 12
-      year_val = year_val - 1
-    end if
-
-    write(time_stamp(1:4), '(I4.4)') year_val
-    time_stamp(5:5)   = '-'
-    write(time_stamp(6:7), '(I2.2)') month_val
-    time_stamp(8:8)   = '-'
-    write(time_stamp(9:10), '(I2.2)') day_val
-    time_stamp(11:11) = 'T'
-    write(time_stamp(12:13), '(I2.2)') hr_val
-    time_stamp(14:14) = ':'
-    time_stamp(15:16) = time(3:4)
-    write(time_stamp(15:16), '(I2.2)') min_val
-    time_stamp(17:17) = ':'
-    time_stamp(18:23) = time(5:10)
-
-    ! print*, time_stamp
-
-  end subroutine get_utc_time_manual
-
-
-  subroutine get_log_level(log_level_str, log_level) 
-    ! This function returns log level needed by fortran stdlib 
-
-    implicit none
-    integer, intent(out) :: log_level
-    ! character(20), intent(in) :: log_level_str
-    character(len=*), intent(in) :: log_level_str
-
-    if (trim(log_level_str) == "INFO") then
-      log_level = 20
-    else if (trim(log_level_str) == "WARN") then
-      log_level = 30
-    else if (trim(log_level_str) == "DEBUG") then
-      log_level = 10
-    else if (trim(log_level_str) == "ERROR") then
-      log_level = 40
-    else if (trim(log_level_str) == "FATAL") then
-      log_level = 50
-    else
-      log_level = 20
-    end if
-  end subroutine get_log_level
-
-
-  subroutine get_log_file_name()
-    implicit none
-    character(128) :: temp_path
-    character(255) :: log_file_path
-    character(255) :: cwd
-    character(23) :: time_stamp
-    integer :: status
-    logical :: exist
-
-    ! Determin log file location
-    call get_environment_variable("NGEN_LOG_FILE_PATH", log_file_path)
-    write (*,*) trim(log_file_path)
-
-    call get_utc_time(time_stamp)
-
-    if (trim(adjustl(log_file_path)) == "") then
-      print*, "log_file_path not found in env. Using local log file path"
-      call getcwd(cwd, status)
-      if (status == 0) then
-        print *, 'Current working directory: ', trim(cwd)
-        temp_path = trim(cwd)//'/' //'run_log/' //time_stamp(1:10)
-        CALL system("mkdir -p " // temp_path)
-        log_file_path = trim(temp_path)// '/' // 'sac_log_' // time_stamp(12:13)//time_stamp(15:16)//time_stamp(18:19)//'.txt'
-        print*, "log_file_path : "//log_file_path
-      else
-        print *, 'Error retrieving current directory'
-        stop
+      logger_initialized = .true.
+      call get_env_var(EV_EWTS_LOGGING, log_env)
+      if (trim(log_env) == "ENABLED") then
+         logging_enabled = .true.
+         print *,trim(MODULE_NAME)," Logging ", trim(log_env)
+         call flush(6)
+        else
+         logging_enabled = .false.
+         print *,trim(MODULE_NAME)," Logging ", trim(log_env)
+         call flush(6)
+         return
       end if
-    end if
+      ! Here because return was not executed above
 
+      ! Set log level from environment variable (if exists)
+      call get_env_var(EV_MODULE_LOGLEVEL, log_env)
+      log_str = trim(log_env)
+      if (log_str == "DEBUG" ) then
+         log_level = LOG_LEVEL_DEBUG
+      else if (log_str == "INFO" ) then
+         log_level = LOG_LEVEL_INFO
+      else if (log_str == "WARNING" ) then
+         log_level = LOG_LEVEL_WARNING
+      else if (log_str == "SEVERE" ) then
+         log_level = LOG_LEVEL_SEVERE
+      else if (log_str == "FATAL" ) then
+         log_level = LOG_LEVEL_FATAL
+      else
+         log_level = LOG_LEVEL_INFO  ! Default level
+      end if
+      print *, trim(MODULE_NAME),"Log level set to ", log_str
+      call flush(6)
 
-    if (len_trim(log_file_name) == 0) then
-      allocate(character(len(trim(log_file_path))) :: log_file_name)
-    end if
-    log_file_name = trim(log_file_path)
-  end subroutine get_log_file_name
+      ! Get the log file path by calling set_log_file_path
+      call set_log_file_path()
 
+      save_log_level = log_level
+      log_level = LOG_LEVEL_INFO ! Ensure this INFO message is always logged
+      log_msg = "Log level set to " // log_str
+      call write_log(log_msg, log_level);
+      log_level = save_log_level;
+   end subroutine initialize_logger
 
-  subroutine create_logger(log_level_str)
-    ! This is the main function that creates and initialise the log file
+   function fit_string(str, target_len) result(fixed_str)
+      implicit none
+      character(len=*), intent(in) :: str
+      integer, intent(in) :: target_len
+      character(len=target_len) :: fixed_str
+      integer :: copy_len
 
-    implicit none
-    character(len=*), intent(in), optional :: log_level_str
-    integer :: status
-    logical :: exist
-    integer :: log_level
-    character(8) :: this_log_level_str
+      ! Determine how many characters to copy (min of source or target length)
+      copy_len = min(len_trim(str), target_len)
 
-    ! set the default log level
-    call get_environment_variable("SACSMA_LOGLEVEL", this_log_level_str)
-    if (trim(adjustl(this_log_level_str)) == "") then
-      print*, "Log level not found in environment variable, will use default log level"
-    else
-      print*, "Log level found in environment : " //this_log_level_str
-      call get_log_level(trim(adjustl(this_log_level_str)), log_level)
-      default_log_level = log_level
-    end if
+      ! Copy the appropriate number of characters, right pad with spaces automatically
+      fixed_str = ' '  ! Initialize to spaces
+      fixed_str(1:copy_len) = str(1:copy_len)
+   end function fit_string
 
-    print*, "Default log level :", default_log_level
+   subroutine write_log(message, msg_level)
+      character(len=*), intent(in) :: message
+      integer, intent (in) :: msg_level
+      character(len=40) :: timestamp, log_level_str
+      character(len=LOG_MODULE_NAME_LEN) :: fixed_tag
+      character(len=LOG_ENTRY_LEVEL_LEN) :: fixed_lvl
+      character(len=1100) :: log_msg
 
+      if (.not. logger_initialized) then
+         call initialize_logger()
+      end if
 
-    if(len_trim(log_file_name) == 0) then
-      call get_log_file_name()
-    end if
+      if (logging_enabled .and. (msg_level >= log_level)) then
+         ! Convert log level to a string
+         if (msg_level == LOG_LEVEL_DEBUG ) then
+            log_level_str = "DEBUG"
+         elseif (msg_level == LOG_LEVEL_INFO ) then
+            log_level_str = "INFO"
+         elseif (msg_level == LOG_LEVEL_WARNING ) then
+            log_level_str = "WARNING"
+         elseif (msg_level == LOG_LEVEL_SEVERE ) then
+            log_level_str = "SEVERE"
+         elseif (msg_level == LOG_LEVEL_FATAL ) then
+            log_level_str = "FATAL"
+         else
+            ! If the level is unknown, ignore logging
+            return
+         end if
 
-    print *, 'log file name: ' // log_file_name
-    !inquire(file=log_file_name, exist=exist)
-    !if (exist) then
-    !        print *, 'log file already exists'
-    !end if
-  end subroutine create_logger
+         ! Log the message
+         call create_timestamp(.false., .true., .true., timestamp)
+         fixed_tag = fit_string(log_module_name, LOG_MODULE_NAME_LEN)
+         fixed_lvl = fit_string(log_level_str,LOG_ENTRY_LEVEL_LEN)
+         log_msg = trim(timestamp) // " " // fixed_tag // " " // fixed_lvl // " " // trim(message)
+         if (log_file_ready(.true.)) then
+            write(log_unit, '(A)') trim(log_msg)
+         else
+            print *, log_msg
+            call flush(6)
+         end if
+         close(log_unit) ! Since this is a shared file with other modules, need to close this acces after each write
+      end if
+   end subroutine write_log
 
+   subroutine create_timestamp(date_only, iso, append_ms, timestamp)
+      logical, intent(in) :: date_only
+      logical, intent(in) :: iso
+      logical, intent(in) :: append_ms
+      character(len=*), intent(out) :: timestamp
 
-  subroutine write_log(msg, log_level_str)
-   !this subroutine writes the log message to the log file
+      integer :: values(8)
+      character(len=32) :: ts_base, ms_str
 
-   implicit none 
-   character(len=*), intent(in)        :: msg
-   character(len=*), intent(in)        :: log_level_str
-   character(len=23) :: utc_time
-   character(len=128) :: log_msg
-   integer :: log_level
+      call date_and_time(values=values)
 
-   logical :: exist
+      if (date_only) then
+         write(ts_base, '(I4.4,I2.2,I2.2)') &
+            values(1), values(2), values(3)
+      else if (iso) then
+         write(ts_base, '(I4.4,"-",I2.2,"-",I2.2,"T",I2.2,":",I2.2,":",I2.2)') &
+            values(1), values(2), values(3), values(5), values(6), values(7)
+      else
+         write(ts_base, '(I4.4,I2.2,I2.2,"T",I2.2,I2.2,I2.2)') &
+            values(1), values(2), values(3), values(5), values(6), values(7)
+      end if
 
-   call get_log_level(log_level_str, log_level)
-   if (log_level < default_log_level) return
+      if (append_ms) then
+         write(ms_str, '(".",I3.3)') values(8)
+         timestamp = trim(ts_base) // trim(ms_str)
+      else
+         timestamp = trim(ts_base)
+      end if
+   end subroutine create_timestamp
 
-   ! get the present time and create the message that will be sent to the log file
-   call get_utc_time(utc_time)
-   log_msg = trim(utc_time) //achar(9) // "SACSMA"//achar(9)//  log_level_str // achar(9)// msg
-   if(len_trim(log_file_name) == 0) then
-     call get_log_file_name()
-     print *, 'log file name: ' // log_file_name
-   end if
+   ! Check if a directory exists
+   logical function directory_exists(path)
+      character(len=*), intent(in) :: path
+      integer :: status
+      character(len=522) :: cmd
 
-   
-   inquire(file=log_file_name, exist=exist)
-   if (exist) then
-    open(12, file=log_file_name, status="old", position="append", action="write")
-   else
-    open(12, file=log_file_name, status="new", action="write")
-  end if
+      cmd = "test -d " // path
+      call execute_command_line(cmd, exitstat=status)
+      directory_exists = (status == 0)
+   end function directory_exists
 
-  write(12, '(A)')trim(log_msg)
-  close(12)
+   ! Create directory if it doesn't exist
+   logical function create_directory(path)
+      character(len=*), intent(in) :: path
+      character(len=522) :: cmd
+      integer :: status
 
-  end subroutine write_log
+      if (.not. directory_exists(path)) then
+         cmd = "mkdir -p " // path
+         call execute_command_line(cmd, exitstat=status)
+         create_directory = (status == 0)
+      else
+         create_directory = .true.
+      end if
+   end function create_directory
 
- end module sac_log_module
+   ! Set the log file path based on environment variables or defaults
+   subroutine set_log_file_path()
+      character(len=256) :: env_var
+      logical :: append_entries
+      logical :: module_log_env_exists = .false.
+      character(len=512) :: log_file_dir
+      character(len=40) :: timestamp
+      integer :: save_log_level
+      character(len=1100) :: log_msg
+
+      append_entries = .true.
+
+      ! Check if module log path environment exists
+      call get_env_var(EV_MODULE_LOGFILEPATH, env_var)
+      if (trim(adjustl(env_var)) /= "") then
+         log_file_path = trim(env_var)
+         module_log_env_exists = .true.
+      else
+         ! log file path not set yet
+         call get_env_var(EV_NGEN_LOGFILEPATH, env_var)
+         if (trim(adjustl(env_var)) /= "") then
+            log_file_path = trim(env_var)
+         else
+            ! ngen log path does not exist. Create alternate log
+            append_entries = .false.
+            ! Determine parent dir
+            if (directory_exists(LOG_DIR_NGENCERF)) then
+               log_file_dir = trim(LOG_DIR_NGENCERF) // DS // trim(LOG_DIR_DEFAULT)
+            else
+               call get_env_var("HOME", env_var)
+               if (trim(adjustl(env_var)) /= "") then
+                  log_file_dir = trim(env_var) // DS // trim(LOG_DIR_DEFAULT)
+               else
+                  log_file_dir = "~" // DS // trim(LOG_DIR_DEFAULT)
+               end if
+            end if
+            ! Ensure parent log dir exists
+            if (create_directory(log_file_dir)) then
+               ! Get dir for this log
+               call get_env_var("USER", env_var)
+               if (trim(adjustl(env_var)) /= "") then
+                  log_file_dir = trim(log_file_dir) // DS // trim(env_var)
+               else
+                  ! Get a date only timestamp
+                  call create_timestamp(.true., .false., .false., timestamp)
+                  log_file_dir = trim(log_file_dir) // DS // trim(timestamp)
+               end if
+               if (create_directory(log_file_dir)) then
+                  ! Set log file name with <date>T<time> as suffix
+                  call create_timestamp(.false., .false., .false., timestamp)
+                  log_file_path = trim(log_file_dir) // DS // trim(MODULE_NAME) // "_" // trim(timestamp) // "." // LOG_FILE_EXT
+               end if
+            end if
+         end if
+      end if
+
+      if (log_file_ready(append_entries)) then
+         if (.not. module_log_env_exists) then
+            call write_env_var(EV_MODULE_LOGFILEPATH, log_file_path)
+            print *, "Module ", trim(MODULE_NAME), " Log File: ", trim(log_file_path)
+            call flush(6)
+            save_log_level = log_level
+            log_level = LOG_LEVEL_INFO ! Ensure this INFO message is always logged
+            log_msg = "Logging started. Log File Path: " // log_file_path
+            call write_log(log_msg, log_level);
+            log_level = save_log_level;
+         end if
+      else
+         print *, "Unable to open log file. Log entries will be writen to stdout"
+         call flush(6)
+        end if
+   end subroutine set_log_file_path
+
+   ! Log file readiness check
+   logical function log_file_ready(append_mode)
+      logical, intent(in) :: append_mode
+      integer :: ios
+
+      if (opened_once) then
+         ! Make sure file pointer to the end of the file
+         open(unit=log_unit, file=log_file_path, status='old', position='append', action='write')
+      else if (trim(log_file_path) /= "") then ! make sure path name not empty
+         if (append_mode) then
+            open(unit=log_unit, file=log_file_path, status='old', action='write', position='append', iostat=ios)
+         else
+            open(unit=log_unit, file=log_file_path, status='new', action='write', iostat=ios)
+         end if
+         if (ios == 0) then
+            opened_once = .true.
+         else
+            opened_once = .false.
+         end if
+      end if
+      log_file_ready = opened_once
+   end function log_file_ready
+
+   subroutine get_env_var(var_name, value)
+      character(len=*), intent(in) :: var_name
+      character(len=256), intent(out) :: value
+      character(len=256) :: result
+
+      call getenv(trim(adjustl(var_name)), result)
+      value = result
+   end subroutine get_env_var
+
+   subroutine write_env_var(var_name, value)
+      character(len=*), intent(in) :: var_name
+      character(len=*), intent(in) :: value
+
+      character(len=512) cmd;
+      cmd = "export " // trim(var_name) // "=" // trim(value)
+      call system(cmd)
+   end subroutine write_env_var
+
+   function is_logger_enabled() result(status)
+      logical :: status
+      status = logging_enabled  ! Return the current logging status
+   end function is_logger_enabled
+
+   function get_log_level() result(level)
+      integer :: level
+      level = log_level  ! Return the current log level
+   end function get_log_level
+
+   function itoa(i) result(res)
+      ! This function convrets an integer to ascii format
+
+      implicit none
+      !class (noahowpLogger), intent(in) :: this
+      character(:),allocatable :: res
+      integer,intent(in) :: i
+      character(range(i)+2) :: tmp
+      write(tmp,'(i0)') i
+      res = trim(tmp)
+   end function itoa
+
+   function rtoa(i) result(res)
+      ! This function convrets a real value to ascii format
+
+      character(:),allocatable :: res
+      real,intent(in) :: i
+      character(128) format
+
+      data format /'(F10.10)'/
+      write(res,format)i
+      res = trim(res)
+   end function rtoa
+
+   function r8toa(i) result(res)
+      ! This function convrets a real value to ascii format
+
+      character(128) :: res
+      real(KIND=8),intent(in) :: i
+      character(128) format
+
+      data format /'(F10.10)'/
+      write(res,format)i
+      res = trim(res)
+   end function r8toa
+
+end module sac_log_module
