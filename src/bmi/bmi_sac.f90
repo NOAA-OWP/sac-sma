@@ -107,13 +107,6 @@ module bmi_sac_module
 
 contains
 
-  function initiate_logger(this) result (bmi_status)
-    class (bmi_sac), intent(in) :: this
-    integer :: bmi_status
-    call create_logger()
-    bmi_status = BMI_SUCCESS
-  end function
-
   ! Get the name of the model.
   function sac_component_name(this, name) result (bmi_status)
     class (bmi_sac), intent(in) :: this
@@ -186,15 +179,12 @@ contains
     character (len=*), intent(in) :: config_file
     integer :: bmi_status
 
-    call create_logger()
-
     if (len(config_file) > 0) then
        call initialize_from_file(this%model, config_file)
-
     !else
        !call initialize_from_defaults(this%model)
      end if
-    call write_log("Initialization Done!", "INFO")
+    call write_log("Initialization Done!", LOG_LEVEL_INFO)
     bmi_status = BMI_SUCCESS
   end function sac_initialize
 
@@ -327,7 +317,7 @@ contains
     case default
        grid = -1
        bmi_status = BMI_FAILURE
-       call write_log("Grid for variable " // name // " not found!", "ERROR")
+       call write_log("Grid for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_var_grid
 
@@ -349,7 +339,7 @@ contains
     case default
        type = "-"
        bmi_status = BMI_FAILURE
-       call write_log("Type for grid " // itoa(grid) // " not found!", "ERROR")
+       call write_log("Type for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_type
 
@@ -371,7 +361,7 @@ contains
     case default
        rank = -1
        bmi_status = BMI_FAILURE
-       call write_log("Rank for grid " //  itoa(grid) // " not found!", "ERROR")
+       call write_log("Rank for grid " //  itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_rank
 
@@ -391,7 +381,7 @@ contains
     case default
        shape(:) = -1
        bmi_status = BMI_FAILURE
-       call write_log("Shape for grid " // itoa(grid) // " not found!", "ERROR")
+       call write_log("Shape for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_shape
 
@@ -413,7 +403,7 @@ contains
     case default
        size = -1
        bmi_status = BMI_FAILURE
-       call write_log("Size for grid " // itoa(grid) // " not found!", "ERROR")
+       call write_log("Size for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_size
 
@@ -452,7 +442,7 @@ contains
     case default
        origin(:) = -1.d0
        bmi_status = BMI_FAILURE
-       call write_log("Origin for grid " // itoa(grid) // " not found!", "ERROR")
+       call write_log("Origin for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_origin
 
@@ -470,7 +460,7 @@ contains
     case default
        x(:) = -1.d0
        bmi_status = BMI_FAILURE
-       call write_log("x value for grid " // itoa(grid) // " not found!", "ERROR")
+       call write_log("x value for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_x
 
@@ -488,7 +478,7 @@ contains
     case default
        y(:) = -1.d0
        bmi_status = BMI_FAILURE
-       call write_log("y value for grid " // itoa(grid) // " not found!", "ERROR")
+       call write_log("y value for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_y
 
@@ -506,7 +496,7 @@ contains
     case default
        z(:) = -1.d0
        bmi_status = BMI_FAILURE
-       call write_log("z value for grid " // itoa(grid) // " not found!", "ERROR")
+       call write_log("z value for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_z
 
@@ -523,7 +513,7 @@ contains
     case default
        count = -1
        bmi_status = BMI_FAILURE
-       call write_log("Node count for grid " // itoa(grid) // " not found!", "ERROR")
+       call write_log("Node count for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_node_count
 
@@ -536,7 +526,7 @@ contains
 
     count = -1
     bmi_status = BMI_FAILURE
-    call write_log("Edge count for grid " // itoa(grid) // " not found!", "ERROR")
+    call write_log("Edge count for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_edge_count
 
   ! Get the number of faces in an unstructured grid.
@@ -559,7 +549,7 @@ contains
 
     edge_nodes(:) = -1
     bmi_status = BMI_FAILURE
-    call write_log("Edge nodes for grid " // itoa(grid) // " not found!", "ERROR")
+    call write_log("Edge nodes for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_edge_nodes
 
   ! Get the face-edge connectivity.
@@ -571,7 +561,7 @@ contains
 
     face_edges(:) = -1
     bmi_status = BMI_FAILURE
-    call write_log("Face edges for grid " // itoa(grid) // " not found!", "ERROR")
+    call write_log("Face edges for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_face_edges
 
   ! Get the face-node connectivity.
@@ -583,7 +573,7 @@ contains
 
     face_nodes(:) = -1
     bmi_status = BMI_FAILURE
-    call write_log("Face nodes for grid " // itoa(grid) // " not found!", "ERROR")
+    call write_log("Face nodes for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_face_nodes
 
   ! Get the number of nodes for each face.
@@ -595,7 +585,7 @@ contains
 
     nodes_per_face(:) = -1
     bmi_status = BMI_FAILURE
-    call write_log("Nodes per face for grid " // itoa(grid) // " not found!", "ERROR")
+    call write_log("Nodes per face for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_nodes_per_face
 
   ! The data type of the variable, as a string.
@@ -622,7 +612,7 @@ contains
     case default
        type = "-"
        bmi_status = BMI_FAILURE
-       call write_log("Type for variable " // name // " not found!", "ERROR")
+       call write_log("Type for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_var_type
 
@@ -745,7 +735,7 @@ contains
     case default
        units = "-"
        bmi_status = BMI_FAILURE
-       call write_log("Unit for variable " // name // " not found!", "ERROR")
+       call write_log("Unit for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_var_units
 
@@ -858,7 +848,7 @@ contains
     case default
        size = -1
        bmi_status = BMI_FAILURE
-       call write_log("Item size for variable " // name // " not found!", "ERROR")
+       call write_log("Item size for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_var_itemsize
 
@@ -880,7 +870,7 @@ contains
     else
        nbytes = -1
        bmi_status = BMI_FAILURE
-       call write_log("nbytes for variable " // name // " not found!", "ERROR")
+       call write_log("nbytes for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end if
   end function sac_var_nbytes
 
@@ -913,7 +903,7 @@ contains
     case default
        dest(:) = -1
        bmi_status = BMI_FAILURE
-       call write_log("Integer value for variable " // name // " not found!", "ERROR")
+       call write_log("Integer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_get_int
 
@@ -1023,7 +1013,7 @@ contains
     case default
        dest(:) = -1.0
        bmi_status = BMI_FAILURE
-       call write_log("Float value for variable " // name // " not found!", "ERROR")
+       call write_log("Float value for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
     ! NOTE, if vars are gridded, then use:
     ! dest = reshape(this%model%temperature, [this%model%n_x*this%model%n_y]) 
@@ -1042,7 +1032,7 @@ contains
     case default
        dest(:) = -1.d0
        bmi_status = BMI_FAILURE
-       call write_log("Double value for variable " // name // " not found!", "ERROR")
+       call write_log("Double value for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_get_double
 
@@ -1062,7 +1052,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
-        call write_log("Integer pointer value for variable " // name // " not found!", "ERROR")
+        call write_log("Integer pointer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_ptr_int
 
@@ -1078,7 +1068,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
-        call write_log("Float pointer value for variable " // name // " not found!", "ERROR")
+        call write_log("Float pointer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_ptr_float
 
@@ -1096,7 +1086,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
-        call write_log("Double pointer value for variable " // name // " not found!", "ERROR")
+        call write_log("Double pointer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_ptr_double
 
@@ -1115,7 +1105,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
-        call write_log(" Variable " // name // " not found in input integer array!", "ERROR")
+        call write_log(" Variable " // name // " not found in input integer array!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_at_indices_int
 
@@ -1134,7 +1124,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
-        call write_log(" Variable " // name // " not found in input float array!", "ERROR")
+        call write_log(" Variable " // name // " not found in input float array!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_at_indices_float
 
@@ -1153,7 +1143,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
-        call write_log(" Variable " // name // " not found in input double array!", "ERROR")
+        call write_log(" Variable " // name // " not found in input double array!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_at_indices_double
 
@@ -1172,7 +1162,7 @@ contains
 !        bmi_status = BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE
-       call write_log(" Failed to set integer value for  " // name // "", "ERROR")
+       call write_log(" Failed to set integer value for  " // name // "", LOG_LEVEL_WARNING)
     end select
   end function sac_set_int
 
@@ -1281,7 +1271,7 @@ contains
        bmi_status = BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE
-       call write_log(" Failed to set float value for  " // name // "", "ERROR")
+       call write_log(" Failed to set float value for  " // name // "", LOG_LEVEL_WARNING)
     end select
     ! NOTE, if vars are gridded, then use:
     ! this%model%temperature = reshape(src, [this%model%n_y, this%model%n_x])
@@ -1317,7 +1307,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
-        call write_log(" Failed to set integer value at indices for  " // name // "", "ERROR")
+        call write_log(" Failed to set integer value at indices for  " // name // "", LOG_LEVEL_WARNING)
      end select
    end function sac_set_at_indices_int
 
@@ -1336,7 +1326,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
-        call write_log(" Failed to set float value at indices for  " // name // "", "ERROR")
+        call write_log(" Failed to set float value at indices for  " // name // "", LOG_LEVEL_WARNING)
      end select
    end function sac_set_at_indices_float
 
@@ -1355,7 +1345,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
-        call write_log(" Failed to set double value at indices for  " // name // "", "ERROR")
+        call write_log(" Failed to set double value at indices for  " // name // "", LOG_LEVEL_WARNING)
      end select
    end function sac_set_at_indices_double
 
@@ -1401,7 +1391,7 @@ contains
 
    if( .not. associated( bmi_box ) .or. .not. associated( bmi_box%ptr ) ) then
     bmi_status = BMI_FAILURE
-    call write_log(" Failed to register BMI", "ERROR")
+    call write_log(" Failed to register BMI", LOG_LEVEL_WARNING)
    else
     !Return the pointer to box
     this = c_loc(bmi_box)
