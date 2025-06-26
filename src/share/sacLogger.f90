@@ -1,7 +1,7 @@
 module sac_log_module
    implicit none
    private
-   public :: write_log, is_logger_enabled, get_log_level, itoa, rtoa, r8toa
+   public :: write_log, is_logger_enabled, get_log_level, itoa, rtoa
    public :: LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARNING, LOG_LEVEL_SEVERE, LOG_LEVEL_FATAL
 
    ! Log levels (made public so other modules can use them)
@@ -326,7 +326,6 @@ contains
       ! This function convrets an integer to ascii format
 
       implicit none
-      !class (noahowpLogger), intent(in) :: this
       character(:),allocatable :: res
       integer,intent(in) :: i
       character(range(i)+2) :: tmp
@@ -335,27 +334,14 @@ contains
    end function itoa
 
    function rtoa(i) result(res)
-      ! This function convrets a real value to ascii format
+        ! Converts a real to ASCII (string)
+        implicit none
+        real, intent(in) :: i
+        character(32) :: buffer
+        character(len=32) :: res
 
-      character(:),allocatable :: res
-      real,intent(in) :: i
-      character(128) format
-
-      data format /'(F10.10)'/
-      write(res,format)i
-      res = trim(res)
-   end function rtoa
-
-   function r8toa(i) result(res)
-      ! This function convrets a real value to ascii format
-
-      character(128) :: res
-      real(KIND=8),intent(in) :: i
-      character(128) format
-
-      data format /'(F10.10)'/
-      write(res,format)i
-      res = trim(res)
-   end function r8toa
+        write(buffer, '(F10.10)') i
+        res = adjustl(trim(buffer))
+    end function rtoa
 
 end module sac_log_module
