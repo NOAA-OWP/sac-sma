@@ -12,6 +12,8 @@ module runModule
   use sac_log_module
 
   implicit none
+  integer :: warning_count_mass_balance = 0
+  integer :: sac_log_level = LOG_LEVEL_INFO
 
   type, public :: sac_type
     type(namelist_type)   :: namelist
@@ -30,7 +32,7 @@ contains
     implicit none
     
     type(sac_type), target, intent(out) :: model
-    character(len=*), intent (in)          :: config_file ! namelist file from command line argument
+    character(len=*), intent (in)       :: config_file ! namelist file from command line argument
     
     associate(namelist   => model%namelist,   &
               runinfo    => model%runinfo,    &
@@ -39,7 +41,10 @@ contains
               modelvar   => model%modelvar,   &
               derived    => model%derived)
               
-      !-----------------------------------------------------------------------------------------
+    call write_log('Initializing Sac-SMA from file', LOG_LEVEL_INFO)
+    sac_log_level = get_log_level()
+
+    !-----------------------------------------------------------------------------------------
       !  read namelist, initialize data structures and read parameters
       !-----------------------------------------------------------------------------------------
       call namelist%readNamelist(config_file)
@@ -207,16 +212,18 @@ contains
     
         !if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
         if(ABS(derived%mass_balance(nh)) .GT. 1.0E-2) then
-            !call write_log("WARNING: Cumulative Mass Balance Fail", LOG_LEVEL_SEVERE)
-            print*, 'WARNING: Cumulative Mass Balance Fail'
-            print*, 'HRU: ', nh
-            print*, "mass balance (mm) = ",derived%mass_balance(nh)
-
-            write(str_real, '(f20.10)' ) derived%mass_balance(nh)
-            !call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // str_real, LOG_LEVEL_SEVERE)
-            !call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // rtoa(derived%mass_balance(nh)), LOG_LEVEL_SEVERE)
+            warning_count_mass_balance = warning_count_mass_balance + 1
+            if ( (sac_log_level <= LOG_LEVEL_DEBUG) .or. (warning_count_mass_balance == 1)) then
+                write(str_real, '(f20.10)' ) ABS(derived%mass_balance(nh))
+                call write_log("Cumulative Mass Balance Fail. Greater than 1.0E-2", LOG_LEVEL_WARNING)
+                call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // trim(str_real), LOG_LEVEL_WARNING)
+                if (warning_count_mass_balance == 1) then
+                    if (sac_log_level .ne. LOG_LEVEL_DEBUG) then
+                        call write_log("Logging this message only once. Set log level to DEBUG to see all occurrences.", LOG_LEVEL_WARNING)
+                    end if
+                end if
+            end if
         end if
-
 
         !---------------------------------------------------------------------
         ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
@@ -245,7 +252,11 @@ contains
     
     ! local variables
     integer         :: nh
-      
+    
+    if (warning_count_mass_balance > 0) then
+        call write_log('Cumulative Mass Balance Fail warning occurred ' //  itoa(warning_count_mass_balance) // ' times', LOG_LEVEL_WARNING)
+    end if
+
     !---------------------------------------------------------------------
     ! Compiler directive NGEN_OUTPUT_ACTIVE to be defined if 
     ! Nextgen is writing model output (https://github.com/NOAA-OWP/ngen)

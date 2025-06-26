@@ -46,14 +46,14 @@ program multi_driver
   !  Initialize
   !  Call the initialize_from_file() subroutine in src/RunSnow17.f90
   !---------------------------------------------------------------------
-  print*, "Initializing run ..."
+  call write_log("Initializing run ...", LOG_LEVEL_INFO)
   call get_command_argument(1, namelist_file, status=status)
 
-  print*, "Retrieved namelist file ... ", namelist_file
+  call write_log("Retrieved namelist file..."//trim(namelist_file), LOG_LEVEL_INFO)
   !if( .not. ( present(namelist_file) ) ) then
   if( status /= 0 ) then
     namelist_file = "namelist.input"
-    print*, 'No namelist filename supplied -- attempting to read default file called namelist.input'
+    call write_log('No namelist filename supplied -- attempting to read default file called namelist.input',LOG_LEVEL_INFO)
   endif  
   status = m%initialize(namelist_file)
 
@@ -68,9 +68,8 @@ program multi_driver
   ! create optional screen output for run times
   call unix_to_datehr(current_time, start_datehr) 
   call unix_to_datehr(end_time, end_datehr) 
-  print*,'----';
-  print*, 'Running model => start: ', start_datehr, ' end: ', end_datehr, ' timesteps: ', int((end_time - current_time)/dt)
-  print*,'----'
+  call write_log('Running model => start: '//trim(start_datehr)//' end: '//trim(end_datehr)// &
+    ' timesteps: '//itoa(int((end_time - current_time)/dt)),LOG_LEVEL_INFO)
   
   ! loop through while current time <= end time (
   do while (current_time .le. end_time)
@@ -84,8 +83,8 @@ program multi_driver
   ! All model finalization code in ../src/RunSac.f90
   !---------------------------------------------------------------------
 
-  print*, "Finalizing..."
+  call write_log("Finalizing...", LOG_LEVEL_INFO)
   status = m%finalize()
-  print*, "DONE"
+  call write_log("DONE", LOG_LEVEL_INFO)
 
 end program multi_driver
