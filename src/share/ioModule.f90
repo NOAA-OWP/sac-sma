@@ -28,10 +28,13 @@ contains
     ! local variables
     character(len=400)      :: readline
     character(len=50)	    :: param
-    integer    	            :: ios=0   ! specify i4b with nrtype?
+    integer    	            :: ios   ! specify i4b with nrtype?
     integer                 :: pos
     integer                 :: n_params_read, nh  ! counters
   
+    !Use assignment instead of declaration+initialization to avoid SAVE attribute gotcha
+    ios = 0
+
     ! open parameter file
     open(unit=51,file=trim(param_file_name),status='old', IOSTAT=ios)
     if (ios /= 0) then
