@@ -10,6 +10,8 @@ module runModule
   use modelVarType
   use derivedType
   use sac_log_module
+  use messagepack
+  use iso_fortran_env
 
   implicit none
   integer :: warning_count_mass_balance = 0
@@ -106,7 +108,7 @@ contains
   ! == Move the model ahead one time step ================================================================
   SUBROUTINE advance_in_time(model)
     type (sac_type), intent (inout) :: model
-    
+     
     ! -- run sac for one time step
     call solve_sac(model)
     ! -- advance run time info
@@ -120,6 +122,7 @@ contains
     
   END SUBROUTINE advance_in_time
   
+
 
   ! == Routing to run the model for one timestep and all spatial sub-units ================================
   SUBROUTINE solve_sac(model)
@@ -284,5 +287,86 @@ contains
 #endif
   
   end subroutine cleanup
+
+  SUBROUTINE new_serialization_request (model, serialized_buffer, exec_status)
+    type(sac_type), intent(in) :: model
+
+    integer :: nh !counter for HRUs
+    class(msgpack), allocatable :: mp
+    class(mp_arr_type), allocatable :: mp_sub_arr
+    class(mp_arr_type), allocatable :: mp_arr
+    byte, dimension(:), allocatable, intent(out) :: serialized_buffer
+    integer, intent(out) :: exec_status
+
+    mp = msgpack()
+    mp_arr = mp_arr_type(model%runinfo%n_hrus)
+    mp_sub_arr = mp_arr_type(11)
+    do nh=1, model%runinfo%n_hrus
+        mp_sub_arr = mp_arr_type(11)
+        mp_sub_arr%values(1)%obj = mp_int_type(model%runinfo%curr_yr) !curr_yr
+        mp_sub_arr%values(2)%obj = mp_int_type(model%runinfo%curr_mo) !curr_mo
+        mp_sub_arr%values(3)%obj = mp_int_type(model%runinfo%curr_dy) !curr_dy
+        mp_sub_arr%values(4)%obj = mp_int_type(model%runinfo%curr_hr) !curr_hr
+        mp_sub_arr%values(5)%obj = mp_float_type(model%modelvar%uztwc(nh)) !uztwc
+        mp_sub_arr%values(6)%obj = mp_float_type(model%modelvar%uzfwc(nh)) !uzfwc
+        mp_sub_arr%values(7)%obj = mp_float_type(model%modelvar%lztwc(nh)) !lztwc
+        mp_sub_arr%values(8)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
+        mp_sub_arr%values(9)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
+        mp_sub_arr%values(10)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
+
+        mp_arr%values(nh)%obj = mp_sub_arr
+    end do
+
+    ! pack the data
+    call mp%pack_alloc(mp_arr, serialized_buffer)
+    if (mp%failed()) then
+        print *, "Error: failed to pack mp_arr"
+        print *, mp%error_message
+        exec_status = 1
+    else
+        exec_status = 0
+    end if
+    
+    ! print the buffer
+    !print *, "Serialized Data:"
+    !call print_bytes_as_hex(serialized_buffer, .true.)
+
+    !deallocate(serialized_buffer)
+    !deallocate(mp_map)
+    !deallocate(mp_arr)
+
+  END SUBROUTINE new_serialization_request
+
+  SUBROUTINE deserialize_mp_buffer (model, serialized_buffer)
+    type(sac_type), intent(in) :: model
+    byte, dimension(:), allocatable, intent(in) :: serialized_buffer
+
+    class(mp_value_type), allocatable :: mpv
+    class(msgpack), allocatable :: mp
+    class(mp_arr_type), allocatable :: mp_arr
+    class(mp_arr_type), allocatable :: mp_sub_arr
+    logical :: error
+    integer(kind=int64) :: index, numelements, nh
+    integer(kind=8), dimension(4) :: runinfo_obj
+    real(kind=8), dimension(6) :: statevars_obj
+    logical :: status
+    
+    call mp%unpack(serialized_buffer, mpv)
+    if (is_arr(mpv)) then
+      call get_arr_ref(mpv, mp_arr, error)
+      numelements = mpv%numelements()
+
+      do nh=1, numelements
+        mp_sub_arr = mp_arr(nh)
+        do index = 1,4
+          call get_int(mp_sub_arr%values(index)%obj, runinfo_obj(index), status)
+        end do
+        do index = 5,10
+          call get_real(mp_sub_arr%values(index)%obj, statevars_obj(index), status)
+        end do
+      end do
+    end if
+    
+  END SUBROUTINE deserialize_mp_buffer
 
 end module runModule              

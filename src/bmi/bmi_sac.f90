@@ -258,6 +258,7 @@ contains
     integer :: bmi_status
 
     call advance_in_time(this%model)
+    
     bmi_status = BMI_SUCCESS
   end function sac_update
 
@@ -609,6 +610,12 @@ contains
     case('hru_id')
        type = "character"
        bmi_status = BMI_SUCCESS
+    case ('serialization_create')
+       type = "int64"
+       bmi_status = BMI_SUCCESS
+    case ('serialization_state')
+       type = "character"
+       bmi_status = BMI_SUCCESS
     case default
        type = "-"
        bmi_status = BMI_FAILURE
@@ -894,17 +901,34 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(inout) :: dest(:)
     integer :: bmi_status
+    byte, dimension(:), allocatable :: serialization_buffer
+    byte, dimension(:), allocatable :: serialized_buffer
+    integer :: exec_status
+    integer :: buffer_size
 
     select case(name)
-!==================== UPDATE IMPLEMENTATION IF NECESSARY FOR INTEGER VARS =================
 !     case("model__identification_number")
 !        dest = [this%model%id]
 !        bmi_status = BMI_SUCCESS
-    case default
-       dest(:) = -1
-       bmi_status = BMI_FAILURE
-       call write_log("Integer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
-    end select
+      case("serialization_create")
+         call new_serialization_request(this%model,serialization_buffer,exec_status)
+         dest = exec_status
+         if (exec_status == 0) then
+            buffer_size = sizeof(serialization_buffer)
+            bmi_status = BMI_SUCCESS
+         else
+            bmi_status = BMI_FAILURE 
+         end if
+
+      case("serialization_state")
+         call deserialize_mp_buffer(this%model,serialized_buffer)
+         bmi_status = BMI_SUCCESS
+
+      case default
+         dest(:) = -1
+         bmi_status = BMI_FAILURE
+         call write_log("Integer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
+      end select
   end function sac_get_int
 
   ! Get a copy of a real variable's values, flattened.
