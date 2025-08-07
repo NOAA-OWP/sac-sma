@@ -24,6 +24,7 @@ module runModule
     type(forcing_type)    :: forcing
     type(modelvar_type)   :: modelvar
     type(derived_type)    :: derived
+    byte, dimension(:), allocatable :: serialization_buffer
   end type sac_type
 
 contains
@@ -288,21 +289,20 @@ contains
   
   end subroutine cleanup
 
-  SUBROUTINE new_serialization_request (model, serialized_buffer, exec_status)
-    type(sac_type), intent(in) :: model
+  SUBROUTINE new_serialization_request (model, exec_status)
+    type(sac_type), intent(inout) :: model
 
     integer :: nh !counter for HRUs
     class(msgpack), allocatable :: mp
     class(mp_arr_type), allocatable :: mp_sub_arr
     class(mp_arr_type), allocatable :: mp_arr
-    byte, dimension(:), allocatable, intent(out) :: serialized_buffer
+    byte, dimension(:), allocatable :: serialization_buffer
     integer, intent(out) :: exec_status
 
     mp = msgpack()
     mp_arr = mp_arr_type(model%runinfo%n_hrus)
-    mp_sub_arr = mp_arr_type(11)
     do nh=1, model%runinfo%n_hrus
-        mp_sub_arr = mp_arr_type(11)
+        mp_sub_arr = mp_arr_type(10)
         mp_sub_arr%values(1)%obj = mp_int_type(model%runinfo%curr_yr) !curr_yr
         mp_sub_arr%values(2)%obj = mp_int_type(model%runinfo%curr_mo) !curr_mo
         mp_sub_arr%values(3)%obj = mp_int_type(model%runinfo%curr_dy) !curr_dy
@@ -318,55 +318,112 @@ contains
     end do
 
     ! pack the data
-    call mp%pack_alloc(mp_arr, serialized_buffer)
+    call mp%pack_alloc(mp_arr, serialization_buffer)
     if (mp%failed()) then
         print *, "Error: failed to pack mp_arr"
         print *, mp%error_message
         exec_status = 1
     else
         exec_status = 0
+        model%serialization_buffer = serialization_buffer
     end if
     
     ! print the buffer
     !print *, "Serialized Data:"
-    !call print_bytes_as_hex(serialized_buffer, .true.)
-
-    !deallocate(serialized_buffer)
-    !deallocate(mp_map)
-    !deallocate(mp_arr)
+    !call print_bytes_as_hex(serialization_buffer, .true.)
 
   END SUBROUTINE new_serialization_request
 
-  SUBROUTINE deserialize_mp_buffer (model, serialized_buffer)
-    type(sac_type), intent(in) :: model
-    byte, dimension(:), allocatable, intent(in) :: serialized_buffer
+  SUBROUTINE deserialize_mp_buffer (model)
+    type(sac_type), intent(inout) :: model
+    
 
-    class(mp_value_type), allocatable :: mpv
+    class(mp_value_type), allocatable :: mpval
     class(msgpack), allocatable :: mp
-    class(mp_arr_type), allocatable :: mp_arr
+    class(mp_arr_type), allocatable :: arr
     class(mp_arr_type), allocatable :: mp_sub_arr
+    class(mp_arr_type), allocatable :: mp_arr
     logical :: error
     integer(kind=int64) :: index, numelements, nh
-    integer(kind=8), dimension(4) :: runinfo_obj
-    real(kind=8), dimension(6) :: statevars_obj
+    integer(kind=int64), dimension(4) :: runinfo_obj
+    real(kind=int64), dimension(6) :: statevars_obj
     logical :: status
+    character(len=10) :: state_datehr         ! string to match date in input states
+    real :: prev_datetime        ! for reading state file
+    character (len=10) :: datehr
+
+    integer :: i, i_tmp
+    logical :: btmp
+    integer(kind=int64) :: itmp
+    real(kind=real64) :: rtmp
+    integer(kind=int64), dimension(3) :: i_a_3
+    integer(kind=int64), dimension(2) :: i_a_2
+    character(:), allocatable :: stmp
+    byte, dimension(:), allocatable :: byte_tmp
+  
     
-    call mp%unpack(serialized_buffer, mpv)
-    if (is_arr(mpv)) then
-      call get_arr_ref(mpv, mp_arr, error)
-      numelements = mpv%numelements()
+    byte, allocatable, dimension(:) :: stream ! buffer of bytes
+    class(mp_value_type), allocatable :: mpv  ! pointer to value
+    class(mp_arr_type), allocatable :: arrtmp
+    
+    allocate(stream(6))
+    stream(1) = ior(MP_FA_L, 3) ! fixarray byte mark
+    stream(2) = 12  ! positive fix int
+    stream(3) = -3  ! negative fix int
+    stream(4) = MP_I16 ! int 16 byte mark
+    stream(5) = 125 ! 0x7d
+    stream(6) = 0   ! 0x00
+    call mp%unpack(stream, mpv)
+    deallocate(stream)
+    if (mp%failed()) then
+        print *, "[Error: issue occurred with unpacking stream(fixarr)"
+        print *, mp%error_message
+        stop 1
+    end if
+    ! check length of the array
+    i_a_3 = (/12, -3, 32000/)
+    if (mpv%numelements() /= 3) then
+        print *, "[Error: unpacked fixarray contains ", mpv%numelements(), &
+            " elements instead of 3"
+        stop 1
+    end if
+    call get_arr_ref(mpv, arrtmp, status)
+    if (.not.(status)) then
+        print *, "[Error: did not unpack mp_arr_type"
+        stop 1
+    end if
+
+    call mp%unpack(model%serialization_buffer, mpval)
+    if (is_arr(mpval)) then
+      !call get_arr_ref(mpval, arrtmp, error)
+      numelements = mpval%numelements()
+
+      prev_datetime = (model%runinfo%start_datetime - model%runinfo%dt)         ! decrement unix model run time in seconds by DT
+      call unix_to_datehr (dble(prev_datetime), state_datehr)    ! create statefile datestring to match
 
       do nh=1, numelements
-        mp_sub_arr = mp_arr(nh)
+        mp_sub_arr = arrtmp(nh)
         do index = 1,4
           call get_int(mp_sub_arr%values(index)%obj, runinfo_obj(index), status)
         end do
         do index = 5,10
-          call get_real(mp_sub_arr%values(index)%obj, statevars_obj(index), status)
+          call get_real(mp_sub_arr%values(index)%obj, statevars_obj(index-4), status)
         end do
+
+        write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') runinfo_obj(1), runinfo_obj(2), runinfo_obj(3), runinfo_obj(4)
+        if(datehr==state_datehr) then !matching state time has been found
+          !model%
+        end if
+
       end do
     end if
     
+    !update the model data
+
+
+
+
+
   END SUBROUTINE deserialize_mp_buffer
 
 end module runModule              

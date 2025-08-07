@@ -15,7 +15,9 @@ module bmi_sac_module
 
   type, extends (bmi) :: bmi_sac
      private
+     !byte, dimension(:), allocatable :: serialization_buffer
      type (sac_type) :: model
+     
    contains
      procedure :: get_component_name => sac_component_name
      procedure :: get_input_item_count => sac_input_item_count
@@ -595,6 +597,9 @@ contains
     character (len=*), intent(in) :: name
     character (len=*), intent(out) :: type
     integer :: bmi_status
+    character(len=BMI_MAX_TYPE_NAME) :: ser_create = "uint64" !pads spaces upto 2048.
+    character(len=BMI_MAX_TYPE_NAME) :: ser_state = "character" !pads spaces upto 2048
+    character(len=BMI_MAX_TYPE_NAME) :: ser_free = "int" !pads spaces upto 2048
 
     select case(name)
     case('tair', 'precip', 'pet',  &                ! input vars
@@ -611,10 +616,13 @@ contains
        type = "character"
        bmi_status = BMI_SUCCESS
     case ('serialization_create')
-       type = "int64"
+       type = ser_create
        bmi_status = BMI_SUCCESS
     case ('serialization_state')
-       type = "character"
+       type = ser_state
+       bmi_status = BMI_SUCCESS
+    case ('serialization_free')
+       type = ser_free
        bmi_status = BMI_SUCCESS
     case default
        type = "-"
@@ -865,19 +873,35 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(out) :: nbytes
     integer :: bmi_status
-    integer :: s1, s2, s3, grid, grid_size, item_size
+    integer :: s1, s2, s3, grid, grid_size, item_size, ser_free
+    integer(kind=int64) :: ser_create
 
-    s1 = this%get_var_grid(name, grid)
-    s2 = this%get_grid_size(grid, grid_size)
-    s3 = this%get_var_itemsize(name, item_size)
-
-    if ((s1 == BMI_SUCCESS).and.(s2 == BMI_SUCCESS).and.(s3 == BMI_SUCCESS)) then
-       nbytes = item_size * grid_size
-       bmi_status = BMI_SUCCESS
+    if (name == "serialization_create") then
+      nbytes = storage_size(ser_create)/8
+      bmi_status = BMI_SUCCESS
+    else if (name == "serialization_state") then
+      if(.not.allocated(this%model%serialization_buffer) .or. size(this%model%serialization_buffer) == 0) then
+         nbytes = -1
+         bmi_status = BMI_FAILURE
+      else
+         nbytes = size(this%model%serialization_buffer)
+         bmi_status = BMI_SUCCESS
+      end if
+    else if (name == "serialization_free") then 
+      nbytes = storage_size(ser_free)/8
+      bmi_status = BMI_SUCCESS
     else
-       nbytes = -1
-       bmi_status = BMI_FAILURE
-       call write_log("nbytes for variable " // name // " not found!", LOG_LEVEL_WARNING)
+      s1 = this%get_var_grid(name, grid)
+      s2 = this%get_grid_size(grid, grid_size)
+      s3 = this%get_var_itemsize(name, item_size)
+      if ((s1 == BMI_SUCCESS).and.(s2 == BMI_SUCCESS).and.(s3 == BMI_SUCCESS)) then
+         nbytes = item_size * grid_size
+         bmi_status = BMI_SUCCESS
+      else
+         nbytes = -1
+         bmi_status = BMI_FAILURE
+         call write_log("nbytes for variable " // name // " not found!", LOG_LEVEL_WARNING)
+      end if
     end if
   end function sac_var_nbytes
 
@@ -901,28 +925,32 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(inout) :: dest(:)
     integer :: bmi_status
-    byte, dimension(:), allocatable :: serialization_buffer
-    byte, dimension(:), allocatable :: serialized_buffer
     integer :: exec_status
     integer :: buffer_size
+    byte, dimension(:), allocatable :: buff_temp
 
     select case(name)
 !     case("model__identification_number")
 !        dest = [this%model%id]
 !        bmi_status = BMI_SUCCESS
       case("serialization_create")
-         call new_serialization_request(this%model,serialization_buffer,exec_status)
-         dest = exec_status
+         
+         !call new_serialization_request(this%model, exec_status)
+         exec_status = 0
          if (exec_status == 0) then
-            buffer_size = sizeof(serialization_buffer)
+            dest = size(this%model%serialization_buffer)
             bmi_status = BMI_SUCCESS
          else
             bmi_status = BMI_FAILURE 
          end if
 
       case("serialization_state")
-         call deserialize_mp_buffer(this%model,serialized_buffer)
-         bmi_status = BMI_SUCCESS
+         if(.not.allocated(this%model%serialization_buffer) .or. size(this%model%serialization_buffer) == 0) then
+            bmi_status = BMI_FAILURE
+         else
+            dest = this%model%serialization_buffer !wonder how this will work in fortran. need to check runtime.
+            bmi_status = BMI_SUCCESS
+         end if
 
       case default
          dest(:) = -1
@@ -1184,9 +1212,17 @@ contains
 !     case("model__identification_number")
 !        this%model%id = src(1)
 !        bmi_status = BMI_SUCCESS
-    case default
-       bmi_status = BMI_FAILURE
-       call write_log(" Failed to set integer value for  " // name // "", LOG_LEVEL_WARNING)
+      case("serialization_state")
+         call deserialize_mp_buffer(this%model)
+         bmi_status = BMI_SUCCESS
+      case("serialization_free")
+         if(allocated(this%model%serialization_buffer)) then
+            deallocate(this%model%serialization_buffer)
+            bmi_status = BMI_SUCCESS
+         end if
+      case default
+         bmi_status = BMI_FAILURE
+         call write_log(" Failed to set integer value for  " // name // "", LOG_LEVEL_WARNING)
     end select
   end function sac_set_int
 
