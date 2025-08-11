@@ -286,6 +286,11 @@ contains
       close(model%runinfo%state_fileunits(nh))
     end do
 #endif
+
+    ! Free up serialization buffer memory
+    if(allocated(model%serialization_buffer)) then
+      deallocate(model%serialization_buffer)
+    end if
   
   end subroutine cleanup
 
@@ -302,17 +307,18 @@ contains
     mp = msgpack()
     mp_arr = mp_arr_type(model%runinfo%n_hrus)
     do nh=1, model%runinfo%n_hrus
-        mp_sub_arr = mp_arr_type(10)
+        mp_sub_arr = mp_arr_type(11)
         mp_sub_arr%values(1)%obj = mp_int_type(model%runinfo%curr_yr) !curr_yr
         mp_sub_arr%values(2)%obj = mp_int_type(model%runinfo%curr_mo) !curr_mo
         mp_sub_arr%values(3)%obj = mp_int_type(model%runinfo%curr_dy) !curr_dy
         mp_sub_arr%values(4)%obj = mp_int_type(model%runinfo%curr_hr) !curr_hr
-        mp_sub_arr%values(5)%obj = mp_float_type(model%modelvar%uztwc(nh)) !uztwc
-        mp_sub_arr%values(6)%obj = mp_float_type(model%modelvar%uzfwc(nh)) !uzfwc
-        mp_sub_arr%values(7)%obj = mp_float_type(model%modelvar%lztwc(nh)) !lztwc
-        mp_sub_arr%values(8)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
-        mp_sub_arr%values(9)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
-        mp_sub_arr%values(10)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
+        mp_sub_arr%values(5)%obj = mp_int_type(nh) !hru number
+        mp_sub_arr%values(6)%obj = mp_float_type(model%modelvar%uztwc(nh)) !uztwc
+        mp_sub_arr%values(7)%obj = mp_float_type(model%modelvar%uzfwc(nh)) !uzfwc
+        mp_sub_arr%values(8)%obj = mp_float_type(model%modelvar%lztwc(nh)) !lztwc
+        mp_sub_arr%values(9)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
+        mp_sub_arr%values(10)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
+        mp_sub_arr%values(11)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
 
         mp_arr%values(nh)%obj = mp_sub_arr
     end do
@@ -338,87 +344,72 @@ contains
     type(sac_type), intent(inout) :: model
     
 
-    class(mp_value_type), allocatable :: mpval
+    class(mp_value_type), allocatable :: mpv
     class(msgpack), allocatable :: mp
     class(mp_arr_type), allocatable :: arr
     class(mp_arr_type), allocatable :: mp_sub_arr
     class(mp_arr_type), allocatable :: mp_arr
     logical :: error
-    integer(kind=int64) :: index, numelements, nh
-    integer(kind=int64), dimension(4) :: runinfo_obj
-    real(kind=int64), dimension(6) :: statevars_obj
+    integer(kind=int64) :: index, numelements, nh, numbytes, yr, mo, dd, hr
+    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc
     logical :: status
     character(len=10) :: state_datehr         ! string to match date in input states
-    real :: prev_datetime        ! for reading state file
+    real :: prev_datetime                     ! for reading state file
     character (len=10) :: datehr
 
-    integer :: i, i_tmp
-    logical :: btmp
-    integer(kind=int64) :: itmp
-    real(kind=real64) :: rtmp
-    integer(kind=int64), dimension(3) :: i_a_3
-    integer(kind=int64), dimension(2) :: i_a_2
-    character(:), allocatable :: stmp
-    byte, dimension(:), allocatable :: byte_tmp
-  
-    
-    byte, allocatable, dimension(:) :: stream ! buffer of bytes
-    class(mp_value_type), allocatable :: mpv  ! pointer to value
-    class(mp_arr_type), allocatable :: arrtmp
-    
-    allocate(stream(6))
-    stream(1) = ior(MP_FA_L, 3) ! fixarray byte mark
-    stream(2) = 12  ! positive fix int
-    stream(3) = -3  ! negative fix int
-    stream(4) = MP_I16 ! int 16 byte mark
-    stream(5) = 125 ! 0x7d
-    stream(6) = 0   ! 0x00
-    call mp%unpack(stream, mpv)
-    deallocate(stream)
-    if (mp%failed()) then
-        print *, "[Error: issue occurred with unpacking stream(fixarr)"
+
+    prev_datetime = (model%runinfo%start_datetime - model%runinfo%dt)         ! decrement unix model run time in seconds by DT
+    call unix_to_datehr (dble(prev_datetime), state_datehr)                   ! create statefile datestring to match      
+    mp = msgpack()
+
+    index = 1
+    do while(mp%is_available(model%serialization_buffer(index:)))
+      call mp%unpack_buf(model%serialization_buffer(index:), mpv, numbytes)   
+      if(mp%failed()) then
         print *, mp%error_message
-        stop 1
-    end if
-    ! check length of the array
-    i_a_3 = (/12, -3, 32000/)
-    if (mpv%numelements() /= 3) then
-        print *, "[Error: unpacked fixarray contains ", mpv%numelements(), &
-            " elements instead of 3"
-        stop 1
-    end if
-    call get_arr_ref(mpv, arrtmp, status)
-    if (.not.(status)) then
-        print *, "[Error: did not unpack mp_arr_type"
-        stop 1
-    end if
+      else
+        call get_arr_ref(mpv, arr, status)
+        if(status) then
+          call get_int(arr%values(1)%obj, yr, status)
+          call get_int(arr%values(2)%obj, mo, status)  
+          call get_int(arr%values(3)%obj, dd, status)
+          call get_int(arr%values(4)%obj, hr, status) 
+          write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') yr,mo,dd,hr
+          if (datehr == state_datehr) then
+            call get_int(arr%values(5)%obj, nh, status)
+            ! Should the state variables be the initial model variables for the restart? 
+            ! Currently, it is assigned to modelvar. But, can easily be updated to initial values.
+          
+            call get_real(arr%values(6)%obj, uztwc, status) !uztwc
+            model%modelvar%uztwc(nh) = uztwc  
+            call get_real(arr%values(7)%obj, uzfwc, status) !uzfwc
+            model%modelvar%uzfwc(nh) = uzfwc
+            call get_real(arr%values(8)%obj, lztwc, status) !lztwc
+            model%modelvar%lztwc(nh) = lztwc
+            call get_real(arr%values(9)%obj, lzfsc, status) !lzfsc
+            model%modelvar%lzfsc(nh) = lzfsc
+            call get_real(arr%values(10)%obj, lzfpc, status) !lzfpc
+            model%modelvar%lzfpc(nh) = lzfpc
+            call get_real(arr%values(11)%obj, adimc, status) !adimc
+            model%modelvar%adimc(nh) = adimc   
+            
+          end if
+        else
+          print *, "error"
 
-    call mp%unpack(model%serialization_buffer, mpval)
-    if (is_arr(mpval)) then
-      !call get_arr_ref(mpval, arrtmp, error)
-      numelements = mpval%numelements()
-
-      prev_datetime = (model%runinfo%start_datetime - model%runinfo%dt)         ! decrement unix model run time in seconds by DT
-      call unix_to_datehr (dble(prev_datetime), state_datehr)    ! create statefile datestring to match
-
-      do nh=1, numelements
-        mp_sub_arr = arrtmp(nh)
-        do index = 1,4
-          call get_int(mp_sub_arr%values(index)%obj, runinfo_obj(index), status)
-        end do
-        do index = 5,10
-          call get_real(mp_sub_arr%values(index)%obj, statevars_obj(index-4), status)
-        end do
-
-        write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') runinfo_obj(1), runinfo_obj(2), runinfo_obj(3), runinfo_obj(4)
-        if(datehr==state_datehr) then !matching state time has been found
-          !model%
         end if
 
-      end do
-    end if
-    
-    !update the model data
+        call mp%print_value(mpv)
+      end if 
+      deallocate (mpv)
+      index = index + numbytes
+      if(index > size(model%serialization_buffer)) then
+        exit
+      end if
+    end do
+
+
+
 
 
 

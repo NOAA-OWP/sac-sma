@@ -26,7 +26,7 @@ EXE = $(exe_dir)/sac.exe
 # Define your Fortran compiler
 #FC  = pgf90
 #FC  = ifort
-FC   = gfortran
+FC   = gfortran-13
 
 #========================================================================
 # PART 2: Define the libraries and flags (can be an include file)
@@ -38,14 +38,14 @@ ifeq "$(FC)" "pgf90"
  INC = -I ./
 endif
 
-ifeq "$(FC)" "gfortran"
+ifeq "$(FC)" "gfortran-13"
  LOCL_PATH = /usr/local
  LIB = -L$(LOCL_PATH)/lib 
  INC = -I ../
 endif
 
 # --- Define flags
-ifeq "$(FC)" "gfortran"
+ifeq "$(FC)" "gfortran-13"
   FLAGS_DEBUG  = -static -Wall -g -ffree-line-length-none -cpp -fcheck=all
   FLAGS_DEBUG77 = -static -std=legacy -Wall -g -ffree-line-length-none -cpp -fcheck=all
   FLAGS = -O3 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
@@ -91,7 +91,11 @@ run_util = \
         modelVarType.f90 \
         derivedType.f90\
         ioModule.f90 \
-        runSac.f90 
+        runSac.f90 \
+        byte_utilities.f90 \
+        messagepack_user.f90 \
+        messagepack_value.f90 \
+        messagepack.f90 
 
 fdatetime_util = datetime_module.f90
 
@@ -127,8 +131,8 @@ check:
 
 # compile model code
 model:
-	$(FC) $(FLAGS77) -c $(model_sac) $(fdatetime) $(INC)
-	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
+	$(FC) $(FLAGS77) -c $(model_sac) $(fdatetime) $(INC) -I ./
+	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC) -I ./
 
 model_debug:
 	$(FC) $(FLAGS_DEBUG77) -c $(model_sac) $(fdatetime) $(INC)
