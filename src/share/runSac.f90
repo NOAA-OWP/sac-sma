@@ -287,7 +287,7 @@ contains
     end do
 #endif
 
-    ! Free up serialization buffer memory
+    !Free up serialization buffer memory
     if(allocated(model%serialization_buffer)) then
       deallocate(model%serialization_buffer)
     end if
@@ -326,18 +326,13 @@ contains
     ! pack the data
     call mp%pack_alloc(mp_arr, serialization_buffer)
     if (mp%failed()) then
-        print *, "Error: failed to pack mp_arr"
-        print *, mp%error_message
+        call write_log("Serialization using messagepack failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
         exec_status = 1
     else
         exec_status = 0
         model%serialization_buffer = serialization_buffer
+        call write_log("Serialization using messagepack successful!", LOG_LEVEL_INFO)
     end if
-    
-    ! print the buffer
-    !print *, "Serialized Data:"
-    !call print_bytes_as_hex(serialization_buffer, .true.)
-
   END SUBROUTINE new_serialization_request
 
   SUBROUTINE deserialize_mp_buffer (model)
@@ -366,7 +361,7 @@ contains
     do while(mp%is_available(model%serialization_buffer(index:)))
       call mp%unpack_buf(model%serialization_buffer(index:), mpv, numbytes)   
       if(mp%failed()) then
-        print *, mp%error_message
+        call write_log("De-serialization using messagepack failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
       else
         call get_arr_ref(mpv, arr, status)
         if(status) then
@@ -395,11 +390,10 @@ contains
             
           end if
         else
-          print *, "error"
+          call write_log("Serialization using messagepack failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
 
         end if
-
-        call mp%print_value(mpv)
+        
       end if 
       deallocate (mpv)
       index = index + numbytes
