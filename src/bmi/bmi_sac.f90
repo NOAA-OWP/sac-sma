@@ -1192,7 +1192,7 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(in) :: src(:)
     integer :: bmi_status
-    integer :: exec_status
+    integer(kind=int64) :: exec_status
 
     !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR INTEGER VARS =================
 

@@ -297,12 +297,12 @@ contains
   SUBROUTINE new_serialization_request (model, exec_status)
     type(sac_type), intent(inout) :: model
 
-    integer :: nh !counter for HRUs
+    integer(kind=int64) :: nh !counter for HRUs
     class(msgpack), allocatable :: mp
     class(mp_arr_type), allocatable :: mp_sub_arr
     class(mp_arr_type), allocatable :: mp_arr
     byte, dimension(:), allocatable :: serialization_buffer
-    integer, intent(out) :: exec_status
+    integerkind=int64, intent(out) :: exec_status
 
     mp = msgpack()
     mp_arr = mp_arr_type(model%runinfo%n_hrus)
