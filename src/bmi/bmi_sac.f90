@@ -309,6 +309,11 @@ contains
          'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
        grid = 0
        bmi_status = BMI_SUCCESS
+    case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! calibratable parameters
+         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &
+         'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv')
+       grid = 0
+       bmi_status = BMI_SUCCESS
     case default
        grid = -1
        bmi_status = BMI_FAILURE
@@ -581,6 +586,11 @@ contains
          'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
        type = "double"
        bmi_status = BMI_SUCCESS
+    case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! calibratable parameters
+         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &
+         'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv')
+       type = "double"
+       bmi_status = BMI_SUCCESS
     case default
        type = "-"
        bmi_status = BMI_FAILURE
@@ -655,6 +665,55 @@ contains
     case("bfncc")
        units = "mm"
        bmi_status = BMI_SUCCESS
+    ! calibratable parameters
+    case("uztwm")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("uzfwm")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lztwm")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lzfsm")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lzfpm")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("adimp")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("uzk")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lzpk")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("lzsk")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("zperc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("rexp")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("pctim")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("pfree")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("riva")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("side")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("rserv")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
     case default
        units = "-"
        bmi_status = BMI_FAILURE
@@ -712,6 +771,58 @@ contains
        bmi_status = BMI_SUCCESS
     case("bfncc")
        size = sizeof(this%model%modelvar%bfncc(1))
+       bmi_status = BMI_SUCCESS
+    ! calibratable parameters
+    case("uztwm")
+       size = sizeof(this%model%parameters%uztwm(1))
+       bmi_status = BMI_SUCCESS
+    case("uzfwm")
+       size = sizeof(this%model%parameters%uzfwm(1))
+       bmi_status = BMI_SUCCESS
+    case("lztwm")
+       size = sizeof(this%model%parameters%lztwm(1))
+       bmi_status = BMI_SUCCESS
+    case("lzfsm")
+       size = sizeof(this%model%parameters%lzfsm(1))
+       bmi_status = BMI_SUCCESS
+    case("lzfpm")
+       size = sizeof(this%model%parameters%lzfpm(1))
+       bmi_status = BMI_SUCCESS
+    case("adimp")
+       size = sizeof(this%model%parameters%adimp(1))
+       bmi_status = BMI_SUCCESS
+    case("uzk")
+       size = sizeof(this%model%parameters%uzk(1))
+       bmi_status = BMI_SUCCESS
+    case("lzpk")
+       size = sizeof(this%model%parameters%lzpk(1))
+       bmi_status = BMI_SUCCESS
+    case("lzsk")
+       size = sizeof(this%model%parameters%lzsk(1))
+       bmi_status = BMI_SUCCESS
+    case("zperc")
+       size = sizeof(this%model%parameters%zperc(1))
+       bmi_status = BMI_SUCCESS
+    case("rexp")
+       size = sizeof(this%model%parameters%rexp(1))
+       bmi_status = BMI_SUCCESS
+    case("pctim")
+       size = sizeof(this%model%parameters%pctim(1))
+       bmi_status = BMI_SUCCESS
+    case("pfree")
+       size = sizeof(this%model%parameters%pfree(1))
+       bmi_status = BMI_SUCCESS
+    case("riva")
+       size = sizeof(this%model%parameters%riva(1))
+       bmi_status = BMI_SUCCESS
+    case("side")
+       size = sizeof(this%model%parameters%side(1))
+       bmi_status = BMI_SUCCESS
+    case("rserv")
+       size = sizeof(this%model%parameters%rserv(1))
+       bmi_status = BMI_SUCCESS
+    case("hru_area")
+       size = sizeof(this%model%parameters%hru_area(1))
        bmi_status = BMI_SUCCESS
     case default
        size = -1
@@ -1039,6 +1150,58 @@ contains
        bmi_status = BMI_SUCCESS
     case("bfncc")
        this%model%modelvar%bfncc(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    ! calibratable parameters
+    case("uztwm")
+       this%model%parameters%uztwm(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("uzfwm")
+       this%model%parameters%uzfwm(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("lztwm")
+       this%model%parameters%lztwm(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("lzfsm")
+       this%model%parameters%lzfsm(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("lzfpm")
+       this%model%parameters%lzfpm(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("adimp")
+       this%model%parameters%adimp(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("uzk")
+       this%model%parameters%uzk(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("lzpk")
+       this%model%parameters%lzpk(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("lzsk")
+       this%model%parameters%lzsk(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("zperc")
+       this%model%parameters%zperc(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("rexp")
+       this%model%parameters%rexp(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("pctim")
+       this%model%parameters%pctim(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("pfree")
+       this%model%parameters%pfree(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("riva")
+       this%model%parameters%riva(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("side")
+       this%model%parameters%side(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("rserv")
+       this%model%parameters%rserv(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("hru_area")
+       this%model%parameters%hru_area(1) = src(1)
        bmi_status = BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE
