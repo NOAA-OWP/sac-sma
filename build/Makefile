@@ -91,11 +91,12 @@ run_util = \
         modelVarType.f90 \
         derivedType.f90\
         ioModule.f90 \
-        runSac.f90 \
         byte_utilities.f90 \
-        messagepack_user.f90 \
         messagepack_value.f90 \
-        messagepack.f90 
+        messagepack_user.f90 \
+        messagepack.f90 \
+        runSac.f90 \
+
 
 fdatetime_util = datetime_module.f90
 

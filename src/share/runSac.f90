@@ -302,7 +302,7 @@ contains
     class(mp_arr_type), allocatable :: mp_sub_arr
     class(mp_arr_type), allocatable :: mp_arr
     byte, dimension(:), allocatable :: serialization_buffer
-    integerkind=int64, intent(out) :: exec_status
+    integer(kind=int64), intent(out) :: exec_status
 
     mp = msgpack()
     mp_arr = mp_arr_type(model%runinfo%n_hrus)
@@ -401,14 +401,6 @@ contains
         exit
       end if
     end do
-
-
-
-
-
-
-
-
   END SUBROUTINE deserialize_mp_buffer
 
 end module runModule              
