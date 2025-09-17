@@ -108,8 +108,7 @@ contains
              
   ! == Move the model ahead one time step ================================================================
   SUBROUTINE advance_in_time(model)
-    type (sac_type), intent (inout) :: model
-     
+    type (sac_type), intent (inout) :: model     
     ! -- run sac for one time step
     call solve_sac(model)
     ! -- advance run time info
@@ -121,8 +120,7 @@ contains
                             model%runinfo%curr_yr, model%runinfo%curr_mo, model%runinfo%curr_dy, &
                             model%runinfo%curr_hr, model%runinfo%curr_min, model%runinfo%curr_sec)
     
-  END SUBROUTINE advance_in_time
-  
+  END SUBROUTINE advance_in_time  
 
 
   ! == Routing to run the model for one timestep and all spatial sub-units ================================
@@ -286,7 +284,6 @@ contains
       close(model%runinfo%state_fileunits(nh))
     end do
 #endif
-
     !Free up serialization buffer memory
     if(allocated(model%serialization_buffer)) then
       deallocate(model%serialization_buffer)
@@ -296,7 +293,6 @@ contains
 
   SUBROUTINE new_serialization_request (model, exec_status)
     type(sac_type), intent(inout) :: model
-
     integer(kind=int64) :: nh !counter for HRUs
     class(msgpack), allocatable :: mp
     class(mp_arr_type), allocatable :: mp_sub_arr
@@ -319,7 +315,6 @@ contains
         mp_sub_arr%values(9)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
         mp_sub_arr%values(10)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
         mp_sub_arr%values(11)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
-
         mp_arr%values(nh)%obj = mp_sub_arr
     end do
 
@@ -337,26 +332,20 @@ contains
 
   SUBROUTINE deserialize_mp_buffer (model)
     type(sac_type), intent(inout) :: model
-    
-
     class(mp_value_type), allocatable :: mpv
     class(msgpack), allocatable :: mp
     class(mp_arr_type), allocatable :: arr
-    class(mp_arr_type), allocatable :: mp_sub_arr
-    class(mp_arr_type), allocatable :: mp_arr
-    logical :: error
-    integer(kind=int64) :: index, numelements, nh, numbytes, yr, mo, dd, hr
+    integer(kind=int64) :: index, nh, numbytes, yr, mo, dd, hr
     real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc
     logical :: status
     character(len=10) :: state_datehr         ! string to match date in input states
     real :: prev_datetime                     ! for reading state file
     character (len=10) :: datehr
 
-
     prev_datetime = (model%runinfo%start_datetime - model%runinfo%dt)         ! decrement unix model run time in seconds by DT
     call unix_to_datehr (dble(prev_datetime), state_datehr)                   ! create statefile datestring to match      
+    
     mp = msgpack()
-
     index = 1
     do while(mp%is_available(model%serialization_buffer(index:)))
       call mp%unpack_buf(model%serialization_buffer(index:), mpv, numbytes)   
@@ -369,7 +358,6 @@ contains
           call get_int(arr%values(2)%obj, mo, status)  
           call get_int(arr%values(3)%obj, dd, status)
           call get_int(arr%values(4)%obj, hr, status) 
-          write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') yr,mo,dd,hr
           if (datehr == state_datehr) then
             call get_int(arr%values(5)%obj, nh, status)
             ! Should the state variables be the initial model variables for the restart? 
@@ -387,13 +375,10 @@ contains
             model%modelvar%lzfpc(nh) = lzfpc
             call get_real(arr%values(11)%obj, adimc, status) !adimc
             model%modelvar%adimc(nh) = adimc   
-            
           end if
         else
           call write_log("Serialization using messagepack failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
-
         end if
-        
       end if 
       deallocate (mpv)
       index = index + numbytes

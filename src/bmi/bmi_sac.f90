@@ -15,8 +15,7 @@ module bmi_sac_module
 
   type, extends (bmi) :: bmi_sac
      private
-     type (sac_type) :: model
-     
+     type (sac_type) :: model     
    contains
      procedure :: get_component_name => sac_component_name
      procedure :: get_input_item_count => sac_input_item_count
@@ -1213,8 +1212,8 @@ contains
       case("serialization_free")
          if(allocated(this%model%serialization_buffer)) then
             deallocate(this%model%serialization_buffer)
-            bmi_status = BMI_SUCCESS
          end if
+         bmi_status = BMI_SUCCESS
       case default
          bmi_status = BMI_FAILURE
          call write_log(" Failed to set integer value for  " // name // "", LOG_LEVEL_WARNING)
