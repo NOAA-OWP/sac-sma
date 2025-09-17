@@ -357,7 +357,8 @@ contains
           call get_int(arr%values(1)%obj, yr, status)
           call get_int(arr%values(2)%obj, mo, status)  
           call get_int(arr%values(3)%obj, dd, status)
-          call get_int(arr%values(4)%obj, hr, status) 
+          call get_int(arr%values(4)%obj, hr, status)
+          write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') yr,mo,dd,hr !format the datestring for comparison next.
           if (datehr == state_datehr) then
             call get_int(arr%values(5)%obj, nh, status)
             ! Should the state variables be the initial model variables for the restart? 
