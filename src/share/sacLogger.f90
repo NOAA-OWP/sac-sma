@@ -19,6 +19,12 @@ module sac_log_module
    logical :: opened_once = .false.
    logical :: logger_initialized = .false.   ! Flag to track if the logger has been initialized
 
+   ! To use Logger while running this module stand-alone, set
+   ! the following environment variables, case-sensitive:
+   !     NGEN_EWTS_LOGGING=ENABLED
+   !     NGEN_LOG_FILE_PATH=<full pathname for log file>
+   !     SACSMA_LOGLEVEL=<DEBUG, INFO, WARNING, SEVERE, FATAL> 
+   !
    ! Constants character(len=1), parameter :: DS = "/"
    character(len=16), parameter :: MODULE_NAME = "Sac-SMA"
    character(len=14), parameter :: LOG_DIR_NGENCERF = "/ngencerf/data"
@@ -36,8 +42,7 @@ module sac_log_module
 contains
 
    subroutine initialize_logger()
-      character(len=256) :: log_env, log_msg
-      character(len=8) :: log_str
+      character(len=256) :: log_env, log_str
       integer :: save_log_level
 
       logger_initialized = .true.
@@ -48,7 +53,7 @@ contains
          call flush(6)
         else
          logging_enabled = .false.
-         print *,trim(MODULE_NAME)," Logging ", trim(log_env)
+         print *,trim(MODULE_NAME)," Logging NOT enabled. EV_EWTS_LOGGING=", trim(log_env)
          call flush(6)
          return
       end if
@@ -68,19 +73,15 @@ contains
       else if (log_str == "FATAL" ) then
          log_level = LOG_LEVEL_FATAL
       else
+         log_str = "INFO (" // trim(EV_MODULE_LOGLEVEL) // " = '" // trim(log_str) // "' INVALID Log Level) Defaulted to INFO"
          log_level = LOG_LEVEL_INFO  ! Default level
       end if
-      print *, trim(MODULE_NAME),"Log level set to ", log_str
-      call flush(6)
 
       ! Get the log file path by calling set_log_file_path
       call set_log_file_path()
 
-      save_log_level = log_level
-      log_level = LOG_LEVEL_INFO ! Ensure this INFO message is always logged
-      log_msg = "Log level set to " // log_str
-      call write_log(log_msg, log_level);
-      log_level = save_log_level;
+      print *, trim(MODULE_NAME)," Log level: ", log_str
+      call flush(6)
    end subroutine initialize_logger
 
    function fit_string(str, target_len) result(fixed_str)
@@ -206,7 +207,6 @@ contains
       character(len=512) :: log_file_dir
       character(len=40) :: timestamp
       integer :: save_log_level
-      character(len=1100) :: log_msg
 
       append_entries = .true.
 
@@ -257,18 +257,13 @@ contains
       if (log_file_ready(append_entries)) then
          if (.not. module_log_env_exists) then
             call write_env_var(EV_MODULE_LOGFILEPATH, log_file_path)
-            print *, "Module ", trim(MODULE_NAME), " Log File: ", trim(log_file_path)
+            print *, trim(MODULE_NAME), " Log File: ", trim(log_file_path)
             call flush(6)
-            save_log_level = log_level
-            log_level = LOG_LEVEL_INFO ! Ensure this INFO message is always logged
-            log_msg = "Logging started. Log File Path: " // log_file_path
-            call write_log(log_msg, log_level);
-            log_level = save_log_level;
          end if
       else
          print *, "Unable to open log file. Log entries will be writen to stdout"
          call flush(6)
-        end if
+      end if
    end subroutine set_log_file_path
 
    ! Log file readiness check
