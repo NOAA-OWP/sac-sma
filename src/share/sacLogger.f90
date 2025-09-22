@@ -51,7 +51,7 @@ contains
          logging_enabled = .true.
          print *,trim(MODULE_NAME)," Logging ", trim(log_env)
          call flush(6)
-        else
+      else 
          logging_enabled = .false.
          print *,trim(MODULE_NAME)," Logging NOT enabled. EV_EWTS_LOGGING=", trim(log_env)
          call flush(6)
