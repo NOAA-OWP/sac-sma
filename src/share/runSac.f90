@@ -330,7 +330,7 @@ contains
     end if
   END SUBROUTINE new_serialization_request
 
-  SUBROUTINE deserialize_mp_buffer (model)
+  SUBROUTINE deserialize_mp_buffer_old(model)
     type(sac_type), intent(inout) :: model
     class(mp_value_type), allocatable :: mpv
     class(msgpack), allocatable :: mp
@@ -387,6 +387,67 @@ contains
         exit
       end if
     end do
+  END SUBROUTINE deserialize_mp_buffer_old
+
+  SUBROUTINE deserialize_mp_buffer (model)
+    type(sac_type), intent(inout) :: model
+    class(msgpack), allocatable :: mp
+    class(mp_value_type), allocatable :: mpv
+    class(mp_arr_type), allocatable :: arr
+    class(mp_arr_type), allocatable :: arr_all_hrus
+    integer(kind=int64) :: index, nh, yr, mo, dd, hr
+    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc
+    logical :: status
+    character(len=10) :: state_datehr         ! string to match date in input states
+    real :: prev_datetime                     ! for reading state file
+    character (len=10) :: datehr
+
+    prev_datetime = (model%runinfo%start_datetime - model%runinfo%dt)         ! decrement unix model run time in seconds by DT
+    call unix_to_datehr (dble(prev_datetime), state_datehr)                   ! create statefile datestring to match      
+    
+    mp = msgpack()
+    call mp%unpack(model%serialization_buffer, mpv)
+    if (is_arr(mpv)) then
+      call get_arr_ref(mpv, arr_all_hrus, status) 
+      if (status) then
+        !may be add another check here for number of elements equal to HRUs?
+        do index=1, mpv%numelements()
+          call get_arr_ref(arr_all_hrus%values(index)%obj,arr,status)
+          if (status) then
+            call get_int(arr%values(1)%obj, yr, status)
+            call get_int(arr%values(2)%obj, mo, status)  
+            call get_int(arr%values(3)%obj, dd, status)
+            call get_int(arr%values(4)%obj, hr, status)
+            write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') yr,mo,dd,hr !format the datestring for comparison next.
+            if (datehr == state_datehr) then
+              call get_int(arr%values(5)%obj, nh, status)
+              ! Should the state variables be the initial model variables for the restart? 
+              ! Currently, it is assigned to modelvar. But, can easily be updated to initial values.
+            
+              call get_real(arr%values(6)%obj, uztwc, status) !uztwc
+              model%modelvar%uztwc(nh) = uztwc  
+              call get_real(arr%values(7)%obj, uzfwc, status) !uzfwc
+              model%modelvar%uzfwc(nh) = uzfwc
+              call get_real(arr%values(8)%obj, lztwc, status) !lztwc
+              model%modelvar%lztwc(nh) = lztwc
+              call get_real(arr%values(9)%obj, lzfsc, status) !lzfsc
+              model%modelvar%lzfsc(nh) = lzfsc
+              call get_real(arr%values(10)%obj, lzfpc, status) !lzfpc
+              model%modelvar%lzfpc(nh) = lzfpc
+              call get_real(arr%values(11)%obj, adimc, status) !adimc
+              model%modelvar%adimc(nh) = adimc   
+            end if
+          else
+            call write_log("Serialization using messagepack (internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+          end if
+        end do
+      else
+          call write_log("Serialization using messagepack (external array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+      end if
+    end if
+
+    deallocate (mpv)
+  
   END SUBROUTINE deserialize_mp_buffer
 
 end module runModule              
