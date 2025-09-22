@@ -134,6 +134,33 @@ rserv | Percent of lower zone free water not transferable to the lower zone tens
 <sup>*</sup> The area is used for areal averaging outputs, so the units of area are not important as long as they are consistent.
 
 
+## Logger
+
+The Errror Warning and Trapping Systems (EWTS) has been added to this module using a logging schema. All write statements have been converted to `write_log` statements, which saves the ouptut to a log file based on the log level.
+
+When running within the ngen framework, the log file and log level are handled programatically. When running standalone, logging is defaulted to DISABLED. 
+
+**Running Standalone**
+
+In order to generate log messages when running standalone, the `NGEN_EWTS_LOGGING` environment variable must be set to `ENABLED`. This is the only required environment variable . Other optional logger environment variables exist for specifying the log file full pathname and setting the log level. If the user only enables logging, the log level will be set to INFO and the filename will be created based on the user and module names. All logger setup details are written to the console when the module is run. 
+```
+# Case Sensitive
+export NGEN_EWTS_LOGGING=ENABLED
+export NGEN_LOG_FILE_PATH=<full pathname for log file>
+export SACSMA_LOGLEVEL=<DEBUG, INFO, WARNING, SEVERE, FATAL>
+```
+**Log Levels**
+| Level   | Description                                         | Typical Use                                   |
+|---------|-----------------------------------------------------|-----------------------------------------------|
+| DEBUG   | Detailed diagnostic info for development/troubleshooting. | Variable values, function entry/exit. |
+| FATAL   | Critical failure that aborts or makes app unrecoverable. | Crashes, memory errors, invalid state.        |
+| INFO    | General events confirming expected operations.       | Startup/shutdown, configs, task completions.  |
+| SEVERE  | Significant problem; app may continue in degraded state. | Failed services, corrupted configs, data loss.|
+| WARNING | Potential issue that doesn’t stop execution.         | Deprecated APIs, missing files, repeatable errors. |
+
+Default log level is INFO. The log level is hierarchical. Setting it to INFO, will log INFO, WARNING, SEVERE and FATAL
+messages.
+
 ## Getting help
 
 If you have questions, concerns, bug reports, etc, please file an issue in this repository's Issue Tracker.
