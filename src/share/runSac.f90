@@ -326,7 +326,7 @@ contains
     else
         exec_status = 0
         model%serialization_buffer = serialization_buffer
-        call write_log("Serialization using messagepack successful!", LOG_LEVEL_INFO)
+        call write_log("Serialization using messagepack successful!", LOG_LEVEL_DEBUG)
     end if
   END SUBROUTINE new_serialization_request
 
@@ -389,8 +389,9 @@ contains
     end do
   END SUBROUTINE deserialize_mp_buffer_old
 
-  SUBROUTINE deserialize_mp_buffer (model)
+  SUBROUTINE deserialize_mp_buffer (model, serialized_data)
     type(sac_type), intent(inout) :: model
+    integer , intent(in) :: serialized_data(:)
     class(msgpack), allocatable :: mp
     class(mp_value_type), allocatable :: mpv
     class(mp_arr_type), allocatable :: arr
@@ -406,21 +407,31 @@ contains
     call unix_to_datehr (dble(prev_datetime), state_datehr)                   ! create statefile datestring to match      
     
     mp = msgpack()
-    call mp%unpack(model%serialization_buffer, mpv)
+    call mp%unpack(serialized_data, mpv)
     if (is_arr(mpv)) then
       call get_arr_ref(mpv, arr_all_hrus, status) 
       if (status) then
-        !may be add another check here for number of elements equal to HRUs?
-        do index=1, mpv%numelements()
-          call get_arr_ref(arr_all_hrus%values(index)%obj,arr,status)
+        !The number of elements in the serialized data array is expected to match the 
+        !number of HRUs. Check here and stop if they are not equal.
+        if (mpv%numelements() .NE. model%runinfo%n_hrus) then
+          call write_log("The serialized data does not contain state information for all HRUs. Please check inputs", LOG_LEVEL_FATAL)
+          stop
+        end if
+
+        do nh=1, model%runinfo%n_hrus
+          call get_arr_ref(arr_all_hrus%values(nh)%obj,arr,status)
           if (status) then
             call get_int(arr%values(1)%obj, yr, status)
             call get_int(arr%values(2)%obj, mo, status)  
             call get_int(arr%values(3)%obj, dd, status)
             call get_int(arr%values(4)%obj, hr, status)
             write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') yr,mo,dd,hr !format the datestring for comparison next.
+            
+            !The state_datehr represents the time/model timestep to which state variables need to be restored.
+            !We loop through the timestamps in the serialized data and identify the time where
+            !it matches with the state saved data and update the model variables for that timestamp
+            !in each HRU. 
             if (datehr == state_datehr) then
-              call get_int(arr%values(5)%obj, nh, status)
               ! Should the state variables be the initial model variables for the restart? 
               ! Currently, it is assigned to modelvar. But, can easily be updated to initial values.
             

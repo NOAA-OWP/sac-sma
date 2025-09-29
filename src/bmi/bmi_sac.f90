@@ -882,7 +882,7 @@ contains
          call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
          bmi_status = BMI_FAILURE
       else
-         nbytes = size(this%model%serialization_buffer)
+         nbytes = size(this%model%serialization_buffer,KIND=int64)
          bmi_status = BMI_SUCCESS
       end if
     else if (name == "serialization_free") then 
@@ -922,19 +922,19 @@ contains
     class (bmi_sac), intent(in) :: this
     character (len=*), intent(in) :: name
     integer, intent(inout) :: dest(:)
-    integer :: bmi_status
+    integer :: bmi_status, exec_status
         
     select case(name)
 !     case("model__identification_number")
 !        dest = [this%model%id]
 !        bmi_status = BMI_SUCCESS
 
-      case("serialization_state")
+      case("serialization_size")
          if(.not.allocated(this%model%serialization_buffer) .or. size(this%model%serialization_buffer) == 0) then
             call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
             bmi_status = BMI_FAILURE
          else
-            dest = size(this%model%serialization_buffer)
+            dest = size(this%model%serialization_buffer, KIND=int64)
             bmi_status = BMI_SUCCESS
          end if
 
@@ -1084,11 +1084,15 @@ contains
      integer :: bmi_status
      type (c_ptr) :: src
      integer :: n_elements
+     
 
  !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR INTEGER VARS =================
 
      select case(name)
-     case default
+      case("serialization_state")
+        dest_ptr = this%model%serialization_buffer
+        bmi_status = BMI_SUCCESS
+      case default
         bmi_status = BMI_FAILURE
         call write_log("Integer pointer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
      end select
@@ -1207,7 +1211,7 @@ contains
             bmi_status = BMI_FAILURE 
          end if
       case("serialization_state")
-         call deserialize_mp_buffer(this%model)
+         call deserialize_mp_buffer(this%model,src)
          bmi_status = BMI_SUCCESS
       case("serialization_free")
          if(allocated(this%model%serialization_buffer)) then
