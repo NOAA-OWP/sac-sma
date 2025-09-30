@@ -392,6 +392,7 @@ contains
   SUBROUTINE deserialize_mp_buffer (model, serialized_data)
     type(sac_type), intent(inout) :: model
     integer , intent(in) :: serialized_data(:)
+    integer(kind=1), allocatable :: serialized_data_1b(:)
     class(msgpack), allocatable :: mp
     class(mp_value_type), allocatable :: mpv
     class(mp_arr_type), allocatable :: arr
@@ -407,7 +408,10 @@ contains
     call unix_to_datehr (dble(prev_datetime), state_datehr)                   ! create statefile datestring to match      
     
     mp = msgpack()
-    call mp%unpack(serialized_data, mpv)
+    !convert integer(4) to integer(1) for messagepack
+    !possible loss of data?
+    serialized_data_1b = int(serialized_data, kind=1) 
+    call mp%unpack(serialized_data_1b, mpv)
     if (is_arr(mpv)) then
       call get_arr_ref(mpv, arr_all_hrus, status) 
       if (status) then
