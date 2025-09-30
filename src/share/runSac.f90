@@ -392,12 +392,12 @@ contains
   SUBROUTINE deserialize_mp_buffer (model, serialized_data)
     type(sac_type), intent(inout) :: model
     integer , intent(in) :: serialized_data(:)
-    integer(kind=1), allocatable :: serialized_data_1b(:)
+    byte, allocatable :: serialized_data_1b(:)
     class(msgpack), allocatable :: mp
     class(mp_value_type), allocatable :: mpv
     class(mp_arr_type), allocatable :: arr
     class(mp_arr_type), allocatable :: arr_all_hrus
-    integer(kind=int64) :: index, nh, yr, mo, dd, hr
+    integer(kind=int64) :: nh, yr, mo, dd, hr
     real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc
     logical :: status
     character(len=10) :: state_datehr         ! string to match date in input states
@@ -410,7 +410,7 @@ contains
     mp = msgpack()
     !convert integer(4) to integer(1) for messagepack
     !possible loss of data?
-    serialized_data_1b = int(serialized_data, kind=1) 
+    serialized_data_1b = transfer(serialized_data, serialized_data_1b) 
     call mp%unpack(serialized_data_1b, mpv)
     if (is_arr(mpv)) then
       call get_arr_ref(mpv, arr_all_hrus, status) 
