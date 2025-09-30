@@ -409,7 +409,6 @@ contains
     
     mp = msgpack()
     !convert integer(4) to integer(1) for messagepack
-    !possible loss of data?
     serialized_data_1b = transfer(serialized_data, serialized_data_1b) 
     call mp%unpack(serialized_data_1b, mpv)
     if (is_arr(mpv)) then

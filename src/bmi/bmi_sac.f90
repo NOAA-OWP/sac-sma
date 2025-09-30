@@ -1210,7 +1210,7 @@ contains
             call write_log("Serialization for state saving complete", LOG_LEVEL_DEBUG)
          else
             bmi_status = BMI_FAILURE 
-            call write_log(" Failed to create serialized data for state saving", LOG_LEVEL_WARNING)
+            call write_log(" Failed to create serialized data for state saving", LOG_LEVEL_FATAL)
          end if
       case("serialization_state")
          call deserialize_mp_buffer(this%model,src)
