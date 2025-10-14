@@ -108,7 +108,8 @@ contains
              
   ! == Move the model ahead one time step ================================================================
   SUBROUTINE advance_in_time(model)
-    type (sac_type), intent (inout) :: model     
+    type (sac_type), intent (inout) :: model
+    
     ! -- run sac for one time step
     call solve_sac(model)
     ! -- advance run time info
