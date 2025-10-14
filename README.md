@@ -153,10 +153,10 @@ export SACSMA_LOGLEVEL=<DEBUG, INFO, WARNING, SEVERE, FATAL>
 | Level   | Description                                         | Typical Use                                   |
 |---------|-----------------------------------------------------|-----------------------------------------------|
 | DEBUG   | Detailed diagnostic info for development/troubleshooting. | Variable values, function entry/exit. |
-| FATAL   | Critical failure that aborts or makes app unrecoverable. | Crashes, memory errors, invalid state.        |
 | INFO    | General events confirming expected operations.       | Startup/shutdown, configs, task completions.  |
-| SEVERE  | Significant problem; app may continue in degraded state. | Failed services, corrupted configs, data loss.|
 | WARNING | Potential issue that doesn’t stop execution.         | Deprecated APIs, missing files, repeatable errors. |
+| SEVERE  | Significant problem; app may continue in degraded state. | Failed services, corrupted configs, data loss.|
+| FATAL   | Critical failure that aborts or makes app unrecoverable. | Crashes, memory errors, invalid state.        |
 
 Default log level is INFO. The log level is hierarchical. Setting it to INFO, will log INFO, WARNING, SEVERE and FATAL
 messages.
