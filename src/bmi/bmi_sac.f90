@@ -15,7 +15,7 @@ module bmi_sac_module
 
   type, extends (bmi) :: bmi_sac
      private
-     type (sac_type) :: model     
+     type (sac_type) :: model
    contains
      procedure :: get_component_name => sac_component_name
      procedure :: get_input_item_count => sac_input_item_count
@@ -258,7 +258,6 @@ contains
     integer :: bmi_status
 
     call advance_in_time(this%model)
-    
     bmi_status = BMI_SUCCESS
   end function sac_update
 
@@ -923,7 +922,6 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(inout) :: dest(:)
     integer :: bmi_status, exec_status
-        
     select case(name)
 !     case("model__identification_number")
 !        dest = [this%model%id]
@@ -1084,7 +1082,6 @@ contains
      integer :: bmi_status
      type (c_ptr) :: src
      integer :: n_elements
-     
 
  !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR INTEGER VARS =================
 

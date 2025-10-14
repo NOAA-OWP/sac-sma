@@ -120,8 +120,8 @@ contains
                             model%runinfo%curr_yr, model%runinfo%curr_mo, model%runinfo%curr_dy, &
                             model%runinfo%curr_hr, model%runinfo%curr_min, model%runinfo%curr_sec)
     
-  END SUBROUTINE advance_in_time  
-
+  END SUBROUTINE advance_in_time
+  
 
   ! == Routing to run the model for one timestep and all spatial sub-units ================================
   SUBROUTINE solve_sac(model)
