@@ -595,6 +595,7 @@ contains
     character (len=*), intent(out) :: type
     integer :: bmi_status
     character(len=BMI_MAX_TYPE_NAME) :: ser_create = "uint64" !pads spaces upto 2048.
+    character(len=BMI_MAX_TYPE_NAME) :: ser_size = "uint64" !pads spaces upto 2048
     character(len=BMI_MAX_TYPE_NAME) :: ser_state = "character" !pads spaces upto 2048
     character(len=BMI_MAX_TYPE_NAME) :: ser_free = "int" !pads spaces upto 2048
 
@@ -614,6 +615,9 @@ contains
        bmi_status = BMI_SUCCESS
     case ('serialization_create')
        type = ser_create
+       bmi_status = BMI_SUCCESS
+    case ('serialization_size')
+       type = ser_size
        bmi_status = BMI_SUCCESS
     case ('serialization_state')
        type = ser_state
@@ -872,7 +876,7 @@ contains
     integer :: bmi_status
     integer :: s1, s2, s3, grid, grid_size, item_size
     
-    if (name == "serialization_create") then
+    if (name == "serialization_create" .or. name == "serialization_size") then
       nbytes = storage_size(0_int64)/8 !returns size in bits. So, divide by 8 for bytes.
       bmi_status = BMI_SUCCESS
     else if (name == "serialization_state") then
