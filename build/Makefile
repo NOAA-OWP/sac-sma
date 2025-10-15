@@ -74,7 +74,7 @@ sac = \
 		duamel.f \
 		ex_sac1.f \
 		sac1.f 
-		
+
 model_sac = $(patsubst %, $(sac_dir)/%, $(sac))
 
 
@@ -95,7 +95,7 @@ run_util = \
         messagepack_value.f90 \
         messagepack_user.f90 \
         messagepack.f90 \
-        runSac.f90 \
+        runSac.f90
 
 
 fdatetime_util = datetime_module.f90
