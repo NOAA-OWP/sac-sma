@@ -410,6 +410,7 @@ contains
     
     mp = msgpack()
     !convert integer(4) to integer(1) for messagepack
+    allocate(serialized_data_1b(size(serialized_data, 1, int64)*4_int64))
     serialized_data_1b = transfer(serialized_data, serialized_data_1b) 
     call mp%unpack(serialized_data_1b, mpv)
     if (is_arr(mpv)) then
@@ -462,6 +463,7 @@ contains
     end if
 
     deallocate (mpv)
+    deallocate (serialized_data_1b)
   
   END SUBROUTINE deserialize_mp_buffer
 
