@@ -297,30 +297,37 @@ contains
     integer(kind=int64) :: nh !counter for HRUs
     class(msgpack), allocatable :: mp
     class(mp_arr_type), allocatable :: mp_sub_arr
-    class(mp_arr_type), allocatable :: mp_arr
+    class(mp_arr_type), allocatable :: mp_state_arr
+    class(mp_arr_type), allocatable :: mp_hru_arr
     byte, dimension(:), allocatable :: serialization_buffer
     integer(kind=int64), intent(out) :: exec_status
 
     mp = msgpack()
-    mp_arr = mp_arr_type(model%runinfo%n_hrus)
+    mp_hru_arr = mp_arr_type(model%runinfo%n_hrus)
     do nh=1, model%runinfo%n_hrus
-        mp_sub_arr = mp_arr_type(11)
-        mp_sub_arr%values(1)%obj = mp_int_type(model%runinfo%curr_yr) !curr_yr
-        mp_sub_arr%values(2)%obj = mp_int_type(model%runinfo%curr_mo) !curr_mo
-        mp_sub_arr%values(3)%obj = mp_int_type(model%runinfo%curr_dy) !curr_dy
-        mp_sub_arr%values(4)%obj = mp_int_type(model%runinfo%curr_hr) !curr_hr
-        mp_sub_arr%values(5)%obj = mp_int_type(nh) !hru number
-        mp_sub_arr%values(6)%obj = mp_float_type(model%modelvar%uztwc(nh)) !uztwc
-        mp_sub_arr%values(7)%obj = mp_float_type(model%modelvar%uzfwc(nh)) !uzfwc
-        mp_sub_arr%values(8)%obj = mp_float_type(model%modelvar%lztwc(nh)) !lztwc
-        mp_sub_arr%values(9)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
-        mp_sub_arr%values(10)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
-        mp_sub_arr%values(11)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
-        mp_arr%values(nh)%obj = mp_sub_arr
+        mp_sub_arr = mp_arr_type(6)
+        mp_sub_arr%values(1)%obj = mp_float_type(model%modelvar%uztwc(nh)) !uztwc
+        mp_sub_arr%values(2)%obj = mp_float_type(model%modelvar%uzfwc(nh)) !uzfwc
+        mp_sub_arr%values(3)%obj = mp_float_type(model%modelvar%lztwc(nh)) !lztwc
+        mp_sub_arr%values(4)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
+        mp_sub_arr%values(5)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
+        mp_sub_arr%values(6)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
+        mp_hru_arr%values(nh)%obj = mp_sub_arr
     end do
 
+    !Add the time information and the state variables by HRU to the main mp array.
+    mp_state_arr = mp_arr_type(7)
+    mp_state_arr%values(1)%obj = mp_int_type(model%runinfo%curr_yr) !curr_yr
+    mp_state_arr%values(2)%obj = mp_int_type(model%runinfo%curr_mo) !curr_mo
+    mp_state_arr%values(3)%obj = mp_int_type(model%runinfo%curr_dy) !curr_dy
+    mp_state_arr%values(4)%obj = mp_int_type(model%runinfo%curr_hr) !curr_hr
+    mp_state_arr%values(5)%obj = mp_int_type(model%runinfo%itime) !itime
+    mp_state_arr%values(6)%obj = mp_float_type(model%runinfo%time_dbl) !time_dbl
+    mp_state_arr%values(7)%obj = mp_hru_arr !state variables by hru
+            
+
     ! pack the data
-    call mp%pack_alloc(mp_arr, serialization_buffer)
+    call mp%pack_alloc(mp_state_arr, serialization_buffer)
     if (mp%failed()) then
         call write_log("Serialization using messagepack failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
         exec_status = 1
@@ -331,65 +338,6 @@ contains
     end if
   END SUBROUTINE new_serialization_request
 
-  SUBROUTINE deserialize_mp_buffer_old(model)
-    type(sac_type), intent(inout) :: model
-    class(mp_value_type), allocatable :: mpv
-    class(msgpack), allocatable :: mp
-    class(mp_arr_type), allocatable :: arr
-    integer(kind=int64) :: index, nh, numbytes, yr, mo, dd, hr
-    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc
-    logical :: status
-    character(len=10) :: state_datehr         ! string to match date in input states
-    real :: prev_datetime                     ! for reading state file
-    character (len=10) :: datehr
-
-    prev_datetime = (model%runinfo%start_datetime - model%runinfo%dt)         ! decrement unix model run time in seconds by DT
-    call unix_to_datehr (dble(prev_datetime), state_datehr)                   ! create statefile datestring to match      
-    
-    mp = msgpack()
-    index = 1
-    do while(mp%is_available(model%serialization_buffer(index:)))
-      call mp%unpack_buf(model%serialization_buffer(index:), mpv, numbytes)   
-      if(mp%failed()) then
-        call write_log("De-serialization using messagepack failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
-      else
-        call get_arr_ref(mpv, arr, status)
-        if(status) then
-          call get_int(arr%values(1)%obj, yr, status)
-          call get_int(arr%values(2)%obj, mo, status)  
-          call get_int(arr%values(3)%obj, dd, status)
-          call get_int(arr%values(4)%obj, hr, status)
-          write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') yr,mo,dd,hr !format the datestring for comparison next.
-          if (datehr == state_datehr) then
-            call get_int(arr%values(5)%obj, nh, status)
-            ! Should the state variables be the initial model variables for the restart? 
-            ! Currently, it is assigned to modelvar. But, can easily be updated to initial values.
-          
-            call get_real(arr%values(6)%obj, uztwc, status) !uztwc
-            model%modelvar%uztwc(nh) = uztwc  
-            call get_real(arr%values(7)%obj, uzfwc, status) !uzfwc
-            model%modelvar%uzfwc(nh) = uzfwc
-            call get_real(arr%values(8)%obj, lztwc, status) !lztwc
-            model%modelvar%lztwc(nh) = lztwc
-            call get_real(arr%values(9)%obj, lzfsc, status) !lzfsc
-            model%modelvar%lzfsc(nh) = lzfsc
-            call get_real(arr%values(10)%obj, lzfpc, status) !lzfpc
-            model%modelvar%lzfpc(nh) = lzfpc
-            call get_real(arr%values(11)%obj, adimc, status) !adimc
-            model%modelvar%adimc(nh) = adimc   
-          end if
-        else
-          call write_log("Serialization using messagepack failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
-        end if
-      end if 
-      deallocate (mpv)
-      index = index + numbytes
-      if(index > size(model%serialization_buffer)) then
-        exit
-      end if
-    end do
-  END SUBROUTINE deserialize_mp_buffer_old
-
   SUBROUTINE deserialize_mp_buffer (model, serialized_data)
     type(sac_type), intent(inout) :: model
     integer , intent(in) :: serialized_data(:)
@@ -398,70 +346,70 @@ contains
     class(mp_value_type), allocatable :: mpv
     class(mp_arr_type), allocatable :: arr
     class(mp_arr_type), allocatable :: arr_all_hrus
-    integer(kind=int64) :: nh, yr, mo, dd, hr
-    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc
+    class(mp_arr_type), allocatable :: arr_state
+    integer(kind=int64) :: nh, yr, mo, dd, hr, itimestep
+    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc, itime_dbl
     logical :: status
-    character(len=10) :: state_datehr         ! string to match date in input states
-    real :: prev_datetime                     ! for reading state file
     character (len=10) :: datehr
 
-    prev_datetime = (model%runinfo%start_datetime - model%runinfo%dt)         ! decrement unix model run time in seconds by DT
-    call unix_to_datehr (dble(prev_datetime), state_datehr)                   ! create statefile datestring to match      
-    
     mp = msgpack()
     !convert integer(4) to integer(1) for messagepack
     allocate(serialized_data_1b(size(serialized_data, 1, int64)*4_int64))
     serialized_data_1b = transfer(serialized_data, serialized_data_1b) 
     call mp%unpack(serialized_data_1b, mpv)
     if (is_arr(mpv)) then
-      call get_arr_ref(mpv, arr_all_hrus, status) 
+      call get_arr_ref(mpv, arr_state, status) 
       if (status) then
-        !The number of elements in the serialized data array is expected to match the 
-        !number of HRUs. Check here and stop if they are not equal.
-        if (mpv%numelements() .NE. model%runinfo%n_hrus) then
-          call write_log("The serialized data does not contain state information for all HRUs. Please check inputs", LOG_LEVEL_FATAL)
-          stop
-        end if
-
-        do nh=1, model%runinfo%n_hrus
-          call get_arr_ref(arr_all_hrus%values(nh)%obj,arr,status)
-          if (status) then
-            call get_int(arr%values(1)%obj, yr, status)
-            call get_int(arr%values(2)%obj, mo, status)  
-            call get_int(arr%values(3)%obj, dd, status)
-            call get_int(arr%values(4)%obj, hr, status)
-            write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') yr,mo,dd,hr !format the datestring for comparison next.
-            
-            !The state_datehr represents the time/model timestep to which state variables need to be restored.
-            !We loop through the timestamps in the serialized data and identify the time where
-            !it matches with the state saved data and update the model variables for that timestamp
-            !in each HRU. 
-            if (datehr == state_datehr) then
-              ! Should the state variables be the initial model variables for the restart? 
-              ! Currently, it is assigned to modelvar. But, can easily be updated to initial values.
-            
-              call get_real(arr%values(6)%obj, uztwc, status) !uztwc
-              model%modelvar%uztwc(nh) = uztwc  
-              call get_real(arr%values(7)%obj, uzfwc, status) !uzfwc
-              model%modelvar%uzfwc(nh) = uzfwc
-              call get_real(arr%values(8)%obj, lztwc, status) !lztwc
-              model%modelvar%lztwc(nh) = lztwc
-              call get_real(arr%values(9)%obj, lzfsc, status) !lzfsc
-              model%modelvar%lzfsc(nh) = lzfsc
-              call get_real(arr%values(10)%obj, lzfpc, status) !lzfpc
-              model%modelvar%lzfpc(nh) = lzfpc
-              call get_real(arr%values(11)%obj, adimc, status) !adimc
-              model%modelvar%adimc(nh) = adimc   
-            end if
-          else
-            call write_log("Serialization using messagepack (internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+        !Update the start and current time for the runInfo.
+        call get_int(arr_state%values(1)%obj, yr, status)
+        model%runinfo%curr_yr = yr
+        call get_int(arr_state%values(2)%obj, mo, status)
+        model%runinfo%curr_mo = mo
+        call get_int(arr_state%values(3)%obj, dd, status)
+        model%runinfo%curr_dy = dd
+        call get_int(arr_state%values(4)%obj, hr, status)
+        model%runinfo%curr_hr = hr
+        write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') yr,mo,dd,hr !format the datestring for comparison next.
+        model%runinfo%curr_datehr = datehr
+        call get_int(arr_state%values(5)%obj, itimestep, status)
+        model%runinfo%itime = itimestep
+        call get_real(arr_state%values(6)%obj, itime_dbl, status)
+        model%runinfo%time_dbl = itime_dbl
+        
+        call get_arr_ref(arr_state%values(7)%obj,arr_all_hrus,status)
+        if(status) then
+          !The number of elements in the serialized HRU data array is expected to match the 
+          !number of HRUs. Check here and stop if they are not equal.
+          if (arr_all_hrus%numelements() .NE. model%runinfo%n_hrus) then
+            call write_log("The serialized data does not contain state information for all HRUs. Please check inputs", LOG_LEVEL_FATAL)
+            stop
           end if
-        end do
-      else
-          call write_log("Serialization using messagepack (external array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+
+          do nh=1, model%runinfo%n_hrus
+            call get_arr_ref(arr_all_hrus%values(nh)%obj,arr,status)
+            if (status) then
+              !Update the state variables for each HRU in the runInfo.
+              call get_real(arr%values(1)%obj, uztwc, status) !uztwc
+              model%modelvar%uztwc(nh) = uztwc  
+              call get_real(arr%values(2)%obj, uzfwc, status) !uzfwc
+              model%modelvar%uzfwc(nh) = uzfwc
+              call get_real(arr%values(3)%obj, lztwc, status) !lztwc
+              model%modelvar%lztwc(nh) = lztwc
+              call get_real(arr%values(4)%obj, lzfsc, status) !lzfsc
+              model%modelvar%lzfsc(nh) = lzfsc
+              call get_real(arr%values(5)%obj, lzfpc, status) !lzfpc
+              model%modelvar%lzfpc(nh) = lzfpc
+              call get_real(arr%values(6)%obj, adimc, status) !adimc
+              model%modelvar%adimc(nh) = adimc   
+            else
+              call write_log("Serialization using messagepack (HRU internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+            end if
+          end do
+        else
+          call write_log("Serialization using messagepack (external HRU array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+        end if
       end if
     end if
-
     deallocate (mpv)
     deallocate (serialized_data_1b)
   
