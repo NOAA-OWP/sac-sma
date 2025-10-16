@@ -1210,12 +1210,18 @@ contains
             bmi_status = BMI_SUCCESS
             call write_log("Serialization for state saving complete", LOG_LEVEL_DEBUG)
          else
-            bmi_status = BMI_FAILURE 
+            bmi_status = BMI_FAILURE
             call write_log(" Failed to create serialized data for state saving", LOG_LEVEL_FATAL)
          end if
       case("serialization_state")
-         call deserialize_mp_buffer(this%model,src)
-         bmi_status = BMI_SUCCESS
+         call deserialize_mp_buffer(this%model, src, exec_status)
+         if (exec_status == 0) then
+            bmi_status = BMI_SUCCESS
+            call write_log("Deserialization for state saving complete", LOG_LEVEL_DEBUG)
+         else
+            bmi_status = BMI_FAILURE
+            call write_log("Failed to restore serialized data for state saving", LOG_LEVEL_FATAL)
+         end if
       case("serialization_free")
          if(allocated(this%model%serialization_buffer)) then
             deallocate(this%model%serialization_buffer)

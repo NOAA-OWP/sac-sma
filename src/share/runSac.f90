@@ -338,9 +338,10 @@ contains
     end if
   END SUBROUTINE new_serialization_request
 
-  SUBROUTINE deserialize_mp_buffer (model, serialized_data)
+  SUBROUTINE deserialize_mp_buffer (model, serialized_data, exec_status)
     type(sac_type), intent(inout) :: model
     integer , intent(in) :: serialized_data(:)
+    integer(kind=int64), intent(out) :: exec_status
     byte, allocatable :: serialized_data_1b(:)
     class(msgpack), allocatable :: mp
     class(mp_value_type), allocatable :: mpv
@@ -379,10 +380,11 @@ contains
         call get_arr_ref(arr_state%values(7)%obj,arr_all_hrus,status)
         if(status) then
           !The number of elements in the serialized HRU data array is expected to match the 
-          !number of HRUs. Check here and stop if they are not equal.
+          !number of HRUs. Check here and report failure if they are not equal.
           if (arr_all_hrus%numelements() .NE. model%runinfo%n_hrus) then
             call write_log("The serialized data does not contain state information for all HRUs. Please check inputs", LOG_LEVEL_FATAL)
-            stop
+            exec_status = 1
+            return
           end if
 
           do nh=1, model%runinfo%n_hrus
@@ -403,15 +405,22 @@ contains
               model%modelvar%adimc(nh) = adimc   
             else
               call write_log("Serialization using messagepack (HRU internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+              exec_status = 1
+              return
             end if
           end do
         else
           call write_log("Serialization using messagepack (external HRU array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+          exec_status = 1
+          return
         end if
       end if
     end if
+
     deallocate (mpv)
     deallocate (serialized_data_1b)
+
+    exec_status = 0
   
   END SUBROUTINE deserialize_mp_buffer
 
