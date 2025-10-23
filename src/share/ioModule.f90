@@ -147,7 +147,7 @@ contains
     
     ! local variables
     integer			    :: yr, mnth, dy, hr, found_start, ios, skipcount
-    real			    :: pcp, tav, pet
+    DOUBLE PRECISION                :: pcp, tav, pet
 
     ! --- code ------------------------------------------------------------------
     print*, 'Initializing forcing files'
@@ -215,8 +215,8 @@ contains
 
     implicit none
 
-    real, intent(in)   :: elevation
-    real, intent(out)  :: sfc_pres
+    DOUBLE PRECISION, intent(in)   :: elevation
+    DOUBLE PRECISION, intent(out)  :: sfc_pres
   
     ! sfc pres in hPa
     sfc_pres = sfc_pres_a * (sfc_pres_b - (sfc_pres_c * (elevation/100.0)) &
@@ -408,7 +408,7 @@ contains
     character(len=480)    :: state_filename
     character(len=10)     :: statefile_datehr
     character(len=10)	  :: state_datehr         ! string to match date in input states
-    real                  :: prev_datetime        ! for reading state file
+    DOUBLE PRECISION      :: prev_datetime        ! for reading state file
     integer               :: states_found         ! counter to match hrus
     
     ! ---- code -----

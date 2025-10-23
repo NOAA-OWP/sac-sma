@@ -11,12 +11,12 @@ type, public :: parameters_type
 
   ! Sac model params in the sac param file
   character(len = 20), dimension(:), allocatable :: hru_id     ! local hru ids for multiple hrus
-  real, dimension(:), allocatable                :: hru_area   ! sq-km, needed for combination & routing conv.
-  real, dimension(:), allocatable                :: uztwm, uzfwm, lztwm, lzfsm, lzfpm, adimp
-  real, dimension(:), allocatable                :: uzk, lzpk, lzsk, zperc, rexp
-  real, dimension(:), allocatable                :: pctim, pfree, riva, side, rserv
+  DOUBLE PRECISION, dimension(:), allocatable                :: hru_area   ! sq-km, needed for combination & routing conv.
+  DOUBLE PRECISION, dimension(:), allocatable                :: uztwm, uzfwm, lztwm, lzfsm, lzfpm, adimp
+  DOUBLE PRECISION, dimension(:), allocatable                :: uzk, lzpk, lzsk, zperc, rexp
+  DOUBLE PRECISION, dimension(:), allocatable                :: pctim, pfree, riva, side, rserv
   ! derived vars
-  real                                           :: total_area  ! total basin area used in averaging outputs
+  DOUBLE PRECISION                                           :: total_area  ! total basin area used in averaging outputs
 
   contains
 
