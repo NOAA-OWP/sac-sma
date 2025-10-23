@@ -7,18 +7,18 @@ module derivedType
 
   type, public :: derived_type
     !areally-average variables for output
-    real                               :: qs_comb, qg_comb, tci_comb, eta_comb 
-    real                               :: roimp_comb, sdro_comb, ssur_comb    
-    real                               :: sif_comb, bfs_comb, bfp_comb        
-    real                               :: precip_comb, tair_comb, pet_comb
-    real                               :: bfncc_comb    
+    DOUBLE PRECISION                                  :: qs_comb, qg_comb, tci_comb, eta_comb 
+    DOUBLE PRECISION                                  :: roimp_comb, sdro_comb, ssur_comb    
+    DOUBLE PRECISION                                  :: sif_comb, bfs_comb, bfp_comb        
+    DOUBLE PRECISION                                  :: precip_comb, tair_comb, pet_comb
+    DOUBLE PRECISION                                  :: bfncc_comb    
     !variables for the mass balance check
-    real, dimension(:), allocatable    :: precip_sum, eta_sum,tci_sum 
-    real, dimension(:), allocatable    :: delta_uztwc_sum, delta_uzfwc_sum     
-    real, dimension(:), allocatable    :: delta_lztwc_sum, delta_lzfsc_sum     
-    real, dimension(:), allocatable    :: delta_lzfpc_sum, delta_adimc_sum     
-    real, dimension(:), allocatable    :: delta_storage_sum, mass_balance       
-    real, dimension(:), allocatable    :: bfncc_sum
+    DOUBLE PRECISION, dimension(:), allocatable    :: precip_sum, eta_sum,tci_sum 
+    DOUBLE PRECISION, dimension(:), allocatable    :: delta_uztwc_sum, delta_uzfwc_sum     
+    DOUBLE PRECISION, dimension(:), allocatable    :: delta_lztwc_sum, delta_lzfsc_sum     
+    DOUBLE PRECISION, dimension(:), allocatable    :: delta_lzfpc_sum, delta_adimc_sum     
+    DOUBLE PRECISION, dimension(:), allocatable    :: delta_storage_sum, mass_balance       
+    DOUBLE PRECISION, dimension(:), allocatable    :: bfncc_sum
     contains
 
       procedure, public  :: initDerived

@@ -9,9 +9,9 @@ save
 type, public :: forcing_type
 
   ! atmospheric inputs & outputs (surface meteorology)
-  real, dimension(:), allocatable   :: tair       ! surface air temperature [degC]
-  real, dimension(:), allocatable   :: precip     ! total input precipitation [mm/s]
-  real, dimension(:), allocatable   :: pet        ! potential evapotranspiration [mm/s]
+  DOUBLE PRECISION, dimension(:), allocatable   :: tair       ! surface air temperature [degC]
+  DOUBLE PRECISION, dimension(:), allocatable   :: precip     ! total input precipitation [mm/s]
+  DOUBLE PRECISION, dimension(:), allocatable   :: pet        ! potential evapotranspiration [mm/s]
 
   contains
 

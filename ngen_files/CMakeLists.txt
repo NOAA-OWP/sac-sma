@@ -62,7 +62,7 @@ set(MODEL_SOURCE_DIR sac-sma/src/)
 set(BMI_SOURCE_DIR sac-sma/src/bmi/)
 
 file(GLOB BMI_SOURCE ${BMI_SOURCE_DIR}*.f90)
-file( GLOB MODEL_SOURCES ${MODEL_SOURCE_DIR}/sac/*.f ${MODEL_SOURCE_DIR}/driver/*.f90 ${MODEL_SOURCE_DIR}/share/*.f90)
+file( GLOB MODEL_SOURCES ${MODEL_SOURCE_DIR}/sac/*.f90 ${MODEL_SOURCE_DIR}/driver/*.f90 ${MODEL_SOURCE_DIR}/share/*.f90)
 
 if(WIN32)
     add_library(sacbmi ${BMI_SOURCE} )
@@ -74,7 +74,11 @@ endif()
 #target_include_directories(surfacebmi PUBLIC ${netCDF_INCLUDE_DIR} ${netCDF_MOD_PATH})
 #We know we are building this for NGEN support, so define the preprocessor directive in the compile options
 #Not sure why the global 
-target_compile_options(sacbmi PUBLIC -cpp -ffree-line-length-none)
+if ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "Intel|IntelLLVM")
+	target_compile_options(sacbmi PUBLIC -cpp)
+else()
+        target_compile_options(sacbmi PUBLIC -cpp -ffree-line-length-none)
+endif()
 
 ##### NETCDF #####
 #target_link_libraries( surfacebmi iso_c_bmi ${netCDF_C_LIB} ${netCDF_FORTRAN_LIB})

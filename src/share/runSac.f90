@@ -117,17 +117,19 @@ contains
 
   ! == Routing to run the model for one timestep and all spatial sub-units ================================
   SUBROUTINE solve_sac(model)
+    USE, INTRINSIC :: IEEE_ARITHMETIC
     type (sac_type), intent (inout) :: model
-
+    
+    LOGICAL :: IS_IT_NAN
     ! local parameters
-    real               :: prcp_mm    ! precip as a depth (for input to sac) (mm)
-    real               :: pet_mm     ! pet as a depth (for input to sac) (mm)
+    DOUBLE PRECISION               :: prcp_mm    ! precip as a depth (for input to sac) (mm)
+    DOUBLE PRECISION               :: pet_mm     ! pet as a depth (for input to sac) (mm)
 
     integer            :: nh             ! counter for hrus
-    real               :: uztwc_0, uzfwc_0
-    real               :: lztwc_0, lzfsc_0, lzfpc_0
-    real               :: adimc_0
-    real               :: dt_mass_bal
+    DOUBLE PRECISION               :: uztwc_0, uzfwc_0
+    DOUBLE PRECISION               :: lztwc_0, lzfsc_0, lzfpc_0
+    DOUBLE PRECISION               :: adimc_0
+    DOUBLE PRECISION               :: dt_mass_bal
     associate(namelist   => model%namelist,   &
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
@@ -158,7 +160,7 @@ contains
         adimc_0 = modelvar%adimc(nh)
          
         call exsac( 1, &                     ! NSOLD, which isn't used
-                    real(runinfo%dt), &      ! DTM, the timestep in seconds
+                    runinfo%dt, &      ! DTM, the timestep in seconds
                     ! Forcing inputs
                     prcp_mm, &               ! liquid water input (mm)
                     forcing%tair(nh), &      ! average air temperature (degC)
@@ -202,11 +204,12 @@ contains
                                    (derived%delta_adimc_sum(nh)*parameters%adimp(nh)) - derived%bfncc_sum(nh)
     
         if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
-            print*, 'WARNING: Cumulative Mass Balance Fail'
+       
+            print*, 'ERROR: Cumulative Mass Balance Exceeded Tolerance Criteria 1E-05'
             print*, 'HRU: ', nh
             print*, "mass balance (mm) = ",derived%mass_balance(nh)
-        end if
-
+            stop
+        endif
 
         !---------------------------------------------------------------------
         ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
@@ -222,7 +225,9 @@ contains
         end if
 #endif        
       end do  ! end of spatial sub-unit (snowband) loop
-
+    !if(IS_IT_NAN) then
+    !stop
+    !endif
     end associate ! terminate associate block
     
   END SUBROUTINE solve_sac

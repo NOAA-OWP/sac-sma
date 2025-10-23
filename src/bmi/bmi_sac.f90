@@ -579,7 +579,7 @@ contains
     case('tair', 'precip', 'pet',  &                ! input vars
          'qs', 'qg', 'tci', 'eta', &                ! output vars
          'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
-       type = "real"
+       type = "double"
        bmi_status = BMI_SUCCESS
     case default
        type = "-"
@@ -780,6 +780,24 @@ contains
     integer :: bmi_status
 
     select case(name)
+    case default
+       dest(:) = -1.0
+       bmi_status = BMI_FAILURE
+    end select
+    ! NOTE, if vars are gridded, then use:
+    ! dest = reshape(this%model%temperature, [this%model%n_x*this%model%n_y]) 
+  end function sac_get_float
+
+  ! Get a copy of a double variable's values, flattened.
+  function sac_get_double(this, name, dest) result (bmi_status)
+    class (bmi_sac), intent(in) :: this
+    character (len=*), intent(in) :: name
+    double precision, intent(inout) :: dest(:)
+    integer :: bmi_status
+
+    !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR DOUBLE VARS =================
+
+    select case(name)
     case("precip")
        dest(1) = this%model%forcing%precip(1)
 !       dest(1) = this%model%derived%precip_comb
@@ -824,24 +842,6 @@ contains
     case("bfncc")
        dest(1) = this%model%modelvar%bfncc(1)
        bmi_status = BMI_SUCCESS
-    case default
-       dest(:) = -1.0
-       bmi_status = BMI_FAILURE
-    end select
-    ! NOTE, if vars are gridded, then use:
-    ! dest = reshape(this%model%temperature, [this%model%n_x*this%model%n_y]) 
-  end function sac_get_float
-
-  ! Get a copy of a double variable's values, flattened.
-  function sac_get_double(this, name, dest) result (bmi_status)
-    class (bmi_sac), intent(in) :: this
-    character (len=*), intent(in) :: name
-    double precision, intent(inout) :: dest(:)
-    integer :: bmi_status
-
-    !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR DOUBLE VARS =================
-
-    select case(name)
     case default
        dest(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -979,6 +979,23 @@ contains
     integer :: bmi_status
 
     select case(name)
+    case default
+       bmi_status = BMI_FAILURE
+    end select
+    ! NOTE, if vars are gridded, then use:
+    ! this%model%temperature = reshape(src, [this%model%n_y, this%model%n_x])
+  end function sac_set_float
+
+  ! Set new double values.
+  function sac_set_double(this, name, src) result (bmi_status)
+    class (bmi_sac), intent(inout) :: this
+    character (len=*), intent(in) :: name
+    double precision, intent(in) :: src(:)
+    integer :: bmi_status
+
+    !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR DOUBLE VARS =================
+
+    select case(name)
     case("precip")
        this%model%forcing%precip(1) = src(1)
 !       this%model%derived%precip_comb = src(1)
@@ -1023,23 +1040,6 @@ contains
     case("bfncc")
        this%model%modelvar%bfncc(1) = src(1)
        bmi_status = BMI_SUCCESS
-    case default
-       bmi_status = BMI_FAILURE
-    end select
-    ! NOTE, if vars are gridded, then use:
-    ! this%model%temperature = reshape(src, [this%model%n_y, this%model%n_x])
-  end function sac_set_float
-
-  ! Set new double values.
-  function sac_set_double(this, name, src) result (bmi_status)
-    class (bmi_sac), intent(inout) :: this
-    character (len=*), intent(in) :: name
-    double precision, intent(in) :: src(:)
-    integer :: bmi_status
-
-    !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR DOUBLE VARS =================
-
-    select case(name)
     case default
        bmi_status = BMI_FAILURE
     end select
