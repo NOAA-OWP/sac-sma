@@ -158,7 +158,7 @@ contains
 
     output_items(1) = 'qs'      ! runoff from direct runoff, impervious runoff, surface runoff, and interflow (mm)
     output_items(2) = 'qg'      ! baseflow (mm)
-    output_items(3) = 'tci'     ! total channel inflow from upstream (mm)
+    output_items(3) = 'tci'     ! total channel inflow from upstream (m)
     output_items(4) = 'eta'     ! actual evapotranspiration (mm) 
     output_items(5) = 'roimp'   ! impervious area runoff (mm)
     output_items(6) = 'sdro'    ! direct runoff (mm)
@@ -621,7 +621,7 @@ contains
        units = "mm"
        bmi_status = BMI_SUCCESS
     case("tci")
-       units = "mm"
+       units = "m"
        bmi_status = BMI_SUCCESS
     case("eta")
        units = "mm"
@@ -927,7 +927,7 @@ contains
        dest(1) = this%model%modelvar%qg(1)
        bmi_status = BMI_SUCCESS
     case("tci")
-       dest(1) = this%model%modelvar%tci(1)
+       dest(1) = this%model%modelvar%tci(1)/1000.0 !convert mm to m
        bmi_status = BMI_SUCCESS
     case("eta")
        dest(1) = this%model%modelvar%eta(1)
