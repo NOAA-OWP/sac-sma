@@ -31,8 +31,9 @@ IMPLICIT NONE
   DOUBLE PRECISION :: BF, SBF, SPBF, PERCM, PERC, DEFR, FR, FI, UZDEFR, CHECK, PERCT, PERCF
   DOUBLE PRECISION :: HPL, RATLP, RATLS, FRACP, PERCP, PERCS, EXCESS, SUR, EUSED, TBF, BFCC, E4
   INTEGER  :: I, NINC
+  LOGICAL  :: bypass_ratio_check = .FALSE. ! <-- NEW FLAG TO FIX GOTO equivalents
 
-! Check ADIMC >= UZTWC
+  ! Check ADIMC >= UZTWC
   IF (ADIMC .LT. UZTWC) ADIMC = UZTWC
 
   ! -------------------------------------------------------------------
@@ -49,23 +50,34 @@ IMPLICIT NONE
     UZTWC = 0.0_dp
     RED = EDMND - E1
     
+    ! Block to handle E2 from UZFWC (Original IF(UZFWC.GE.RED) GO TO 221)
     IF (UZFWC .GE. RED) THEN
+      ! Original Label 221 logic
       E2 = RED
       UZFWC = UZFWC - E2
       RED = 0.0_dp
+      ! Code falls through to 220 comparison (we don't set bypass)
     ELSE
+      ! Original logic (UZFWC < RED)
       E2 = UZFWC
       UZFWC = 0.0_dp
       RED = RED - E2
+      bypass_ratio_check = .TRUE. ! <-- SET FLAG to emulate GO TO 225
     END IF
   END IF
   
-  IF ((UZTWC / UZTWM) .LT. (UZFWC / UZFWM)) THEN
-    UZRAT = (UZTWC + UZFWC) / (UZTWM + UZFWM)
-    UZTWC = UZTWM * UZRAT
-    UZFWC = UZFWM * UZRAT
+  ! --- FIX FOR LOGICAL BYPASS (Original Label 220) ---
+  IF (.NOT. bypass_ratio_check) THEN
+    ! This block is only executed if we did NOT hit the UZFWC < RED (bypass) condition
+    IF ((UZTWC / UZTWM) .LT. (UZFWC / UZFWM)) THEN
+      UZRAT = (UZTWC + UZFWC) / (UZTWM + UZFWM)
+      UZTWC = UZTWM * UZRAT
+      UZFWC = UZFWM * UZRAT
+    END IF
   END IF
+  ! --- END LOGIC FIX ---
 
+  ! Compute ET from the lower zone (Original Label 225 onwards)
   E3 = RED * (LZTWC / (UZTWM + LZTWM))
   LZTWC = LZTWC - E3
   
@@ -119,8 +131,8 @@ IMPLICIT NONE
   NINC = INT(1.0_dp + 0.2_dp * (UZFWC + TWX))
   IF (NINC .LT. 1) NINC = 1
   
-  DINC = (1.0_dp / NINC) * DT
-  PINC = TWX / NINC
+  DINC = (1.0_dp / REAL(NINC, dp)) * DT
+  PINC = TWX / REAL(NINC, dp)
   
   DUZ = 1.0_dp - ((1.0_dp - UZK) ** DINC)
   DLZP = 1.0_dp - ((1.0_dp - LZPK) ** DINC)
@@ -140,6 +152,7 @@ IMPLICIT NONE
     ! Baseflow (BF)
     BF = LZFPC * DLZP
     LZFPC = LZFPC - BF
+    IF (LZFPC .LT. 0.0_dp) LZFPC = 0.0_dp ! <-- ADDED ZERO CLAMP
     IF (LZFPC .LT. 0.0001_dp) THEN
       BF = BF + LZFPC
       LZFPC = 0.0_dp
@@ -149,6 +162,7 @@ IMPLICIT NONE
     
     BF = LZFSC * DLZS
     LZFSC = LZFSC - BF
+    IF (LZFSC .LT. 0.0_dp) LZFSC = 0.0_dp ! <-- ADDED ZERO CLAMP
     IF (LZFSC .LT. 0.0001_dp) THEN
       BF = BF + LZFSC
       LZFSC = 0.0_dp
@@ -162,6 +176,7 @@ IMPLICIT NONE
       PERCM = LZFPM * DLZP + LZFSM * DLZS
       PERC = PERCM * (UZFWC / UZFWM)
       DEFR = 1.0_dp - ((LZTWC + LZFPC + LZFSC) / (LZTWM + LZFPM + LZFSM))
+      
       FR = 1.0_dp
       FI = 1.0_dp
       
@@ -206,11 +221,37 @@ IMPLICIT NONE
       PERCF = PERCF + PERC * PFREE
       
       IF (PERCF .NE. 0.0_dp) THEN
-        HPL = LZFPM / (LZFPM + LZFSM)
-        RATLP = LZFPC / LZFPM
-        RATLS = LZFSC / LZFSM
-        FRACP = (HPL * 2.0_dp * (1.0_dp - RATLP)) / ((1.0_dp - RATLP) + (1.0_dp - RATLS))
+        ! --- NAN FIX: Added checks for zero capacity ---
+        IF (LZFPM .LT. TINY(LZFPM) .OR. LZFSM .LT. TINY(LZFSM)) THEN
+           ! If capacity is near zero, use a safe default or simpler calculation.
+           ! Assuming both are tiny, this entire PERCF distribution is safely skipped,
+           ! or the fraction is simply 1.0 (all to LZFPM if LZFPM is non-zero).
+           HPL = LZFPM / (LZFPM + LZFSM)
+           IF (ABS(LZFPM + LZFSM) .LT. TINY(LZFPM + LZFSM)) THEN
+               HPL = 0.5_dp ! Default to 50/50 if total capacity is zero
+           END IF
+           
+           RATLP = LZFPC / LZFPM
+           RATLS = LZFSC / LZFSM
+           
+           IF (LZFPM .LT. TINY(LZFPM)) RATLP = 0.0_dp
+           IF (LZFSM .LT. TINY(LZFSM)) RATLS = 0.0_dp
+           
+        ELSE
+           HPL = LZFPM / (LZFPM + LZFSM)
+           RATLP = LZFPC / LZFPM
+           RATLS = LZFSC / LZFSM
+        END IF
         
+        FRACP_DENOM = (1.0_dp - RATLP) + (1.0_dp - RATLS)
+        
+        IF (ABS(FRACP_DENOM) .LT. TINY(FRACP_DENOM)) THEN
+           FRACP = 1.0_dp 
+        ELSE
+           FRACP = (HPL * 2.0_dp * (1.0_dp - RATLP)) / FRACP_DENOM
+        END IF
+        ! --- END NAN FIX ---
+
         IF (FRACP .GT. 1.0_dp) FRACP = 1.0_dp
         
         PERCP = PERCF * FRACP
@@ -221,6 +262,7 @@ IMPLICIT NONE
           PERCS = PERCS - LZFSC + LZFSM
           LZFSC = LZFSM
         END IF 
+        IF (LZFSC .LT. 0.0_dp) LZFSC = 0.0_dp ! Final Zero Clamp
         
         LZFPC = LZFPC + (PERCF - PERCS)
         
@@ -229,6 +271,8 @@ IMPLICIT NONE
           LZTWC = LZTWC + EXCESS
           LZFPC = LZFPM
         END IF
+        IF (LZFPC .LT. 0.0_dp) LZFPC = 0.0_dp ! Final Zero Clamp
+        
       END IF
       
       ! Distribute PINC (Available Moisture)
@@ -271,7 +315,7 @@ IMPLICIT NONE
   IF (BFS .LT. 0.0_dp) BFS = 0.0_dp
   BFNCC = TBF - BFCC
   
-  ! Monthly Sums (FSUMS1)
+  ! FSUMS1 Updates
   SINTFT = SINTFT + SIF
   SGWFP = SGWFP + BFP
   SGWFS = SGWFS + BFS
@@ -305,7 +349,7 @@ IMPLICIT NONE
                                UZTWM, UZFWM, LZTWM, LZFSM, LZFPM, LZSK, LZPK, &
                                UZTWC, UZFWC, LZTWC, LZFSC, LZFPC)
   
-  ! Update RSUM (COMMON Block replacement)
+  ! Update RSUM
   RSUM(1) = RSUM(1) + TCI
   RSUM(2) = RSUM(2) + ROIMP
   RSUM(3) = RSUM(3) + SDRO
@@ -315,6 +359,7 @@ IMPLICIT NONE
   RSUM(7) = RSUM(7) + BFP
   
 END SUBROUTINE SAC1
+
 
 
 ! ====================================================================
