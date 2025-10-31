@@ -11,8 +11,14 @@ SUBROUTINE SAC1(DT, PXV, EP, TCI, ROIMP, SDRO, SSUR, SIF, BFS, BFP, TET, BFNCC, 
   
 IMPLICIT NONE
   
-  ! ----- DUMMY ARGUMENTS (Passed In/Out) -----
-  DOUBLE PRECISION, INTENT(IN)    :: DT, PXV, EP
+  ! ----- INPUT ARGUMENTS -----
+  DOUBLE PRECISION, INTENT(IN)    :: DT
+!    ---- Timestep ------
+!    DT      Computational time interval for sac-sma
+  DOUBLE PRECISION, INTENT(IN)    :: PXV, EP
+!    ----- FORCINGS -----
+!    PXV      Input moisture (e.g. precip, precip+melt)
+!    ET       Potential evapotranspiration  
   DOUBLE PRECISION, INTENT(IN)    :: TA, LWE, WE, AESC
   INTEGER, INTENT(IN)     :: IFRZE, ISC
   DOUBLE PRECISION, INTENT(INOUT) :: TCI, ROIMP, SDRO, SSUR, SIF, BFS, BFP, TET, BFNCC
@@ -21,8 +27,30 @@ IMPLICIT NONE
   DOUBLE PRECISION, INTENT(IN)    :: UZTWM, UZFWM, UZK, PCTIM, ADIMP, RIVA, ZPERC, &
                              REXP, LZTWM, LZFSM, LZFPM, LZSK, LZPK, PFREE, &
                              SIDE, RSERV
+!    ----- PARAMETERS -----
+!    UZTWM    Maximum upper zone tension water
+!    UZFWM    Maximum upper zone free water
+!    LZTWM    Maximum lower zone tension water
+!    LZFSM    Maximum lower zone free water, secondary (aka
+!                 supplemental)
+!    LZFPM    Maximum lower zone free water, primary
+!    ADIMP    Additional "impervious" area due to saturation.  Also has
+!                 been defined as the fraction of area that can produce
+!                 direct runoff - this is the maximum value it can be
+!    UZK      Upper zone recession coefficient
+!    LZPK     Lower zone recession coefficient, primary
+!    LZSK     Lower zone recession coefficient, secondary (supplemental)
+!    ZPERC    Minimum percolation rate coefficient
+!    REXP     Percolation equation exponent
+!    PCTIM    Minimum percent impervious area.  this area is always
+!                 impervious (e.g. roads)
+!    PFREE    Percent percolating directly to lower zone free water
+!    RIVA     Percent riparian area
+!    SIDE     Portion of baseflow which does *NOT* go to the stream
+!    RSERV    Percent of lower zone free water not transferable to the
+!                 lower zone tension water                            
                              
-  ! SAC State Variables (INOUT - Their values change here)
+  ! SAC State Variables
   DOUBLE PRECISION, INTENT(INOUT) :: UZTWC, UZFWC, LZTWC, LZFSC, LZFPC, ADIMC
   
   ! ----- LOCAL VARIABLES (All converted to DOUBLE PRECISION) -----
@@ -32,7 +60,100 @@ IMPLICIT NONE
   DOUBLE PRECISION :: HPL, RATLP, RATLS, FRACP, PERCP, PERCS, EXCESS, SUR, EUSED, TBF, BFCC, E4
   DOUBLE PRECISION :: FRACP_DENOM
   INTEGER  :: I, NINC
-  LOGICAL  :: bypass_ratio_check = .FALSE. ! <-- NEW FLAG TO FIX GOTO equivalents
+  LOGICAL  :: bypass_ratio_check = .FALSE. ! <-- FLAG for GOTO equivalents
+
+!    ----- VARIABLES -----
+!    IFRZE    Frozen ground module switch.  0 = No frozen ground module,
+!                 1 = Use frozen ground module
+!    EDMND    ET demand for the time interval
+!    E1       ET from the upper zone tension water content (UZTWC)
+!    RED      Residual ET demand
+!    E2       ET from upper zone free water content (UZFWC)
+!    UZRAT    Upper zone ratio used to transfer water from free to
+!                 tension water store
+!    E3       ET from the lower zone tension water content (LZTWC)
+!    RATLZT   Ratio of the lower zone tension water content to the
+!                 maximum tension water.  AKA: percent saturation of 
+!                 the lower zone tension water
+!    DEL      Used for multiple calculations in the code:
+!                 1. Amount of water moved from lower zone free water
+!                    content to the tension water content
+!                 2. Incremental interflow
+!    E5       ET from ADIMP area
+!    TWX      Time interval available moisture in excess of UZTW
+!                 requirements
+!    SIMPVT   Sum of ROIMP
+!    SPERC    Sum of incremental percolation
+!    SPBF     Sum of the incremental LZ primary baseflow component only
+!    NINC     Number of time sub-increments that the time interval is
+!                 diveded into for further soil moisture accounting
+!    DINC     Length of each sub-increment (calculated by NINC) in days
+!    PINC     Amount of available moisture for each time sub-increment
+!    DUZ      Depletion in the upper zone
+!    DLZP     Depletion in the lower zone, primary
+!    DLZS     Depletion in the lower zone, secondary
+!    PAREA    Pervious area
+!    I        Loop counter
+!    ADSUR    Surface runoff from portion of ADIMP not currently
+!             generating direct runoff (ADDRO)
+!    RATIO    Ratio of excess water in the upper zone from ADIMC to the
+!                 maximum lower zone tension water. Used to calculate
+!                 ADDRO
+!    ADDRO    Additional "impervious" direct runoff from ADIMP.
+!                 Essentially saturation excess runoff from ADIMP area
+!    BF       Used for multiple baseflow calculations in the code
+!                 1. Incremental baseflow, lower zone primary
+!                 2. Incremental baseflow, lower zone secondary
+!    SBF      Sum of the incremental baseflow components (LZ primary,
+!                 secondary).
+!    PERCM    Limiting percolation value (aka maximum percolation). In
+!                 some documentation it is referred to as PBASE
+!    PERC     Percolation
+!    DEFR     Lower zone moisture deficiency ratio
+!    FR       Change in percolation withdrawal due to frozen ground
+!    FI       Change in interflow withdrawal due to frozen ground
+!    UZDEFR   Calculated, but not used. RECOMMEND removing
+!    CHECK    A check to see if percolation exceeds the lower zone
+!                 deficiency
+!    SPERC    Sum of interval percolation
+!    PERCT    Percolation to tension water
+!    PERCF    Percolation to free water
+!    HPL      Relative size of the lower zone max free water, primary
+!                 storage to the lower zone total max free water storage
+!    RATLP    Content capacity ratio (LZ, primary) (i.e. relative
+!                 fullness)
+!    RATLS    Content capacity ratio (LZ, secondary) (i.e. relative
+!                 fullness)
+!    FRACP    Fraction going to primary store during each interval
+!    PERCP    Amount of excess percolation going to the LZ primary store
+!    PERCS    Amount of excess percolation going to the LZ secondary
+!                 store
+!    EXCESS   LZ free water in excess of the maximum to be removed from
+!                 LZFPC and added to LZTWC
+!    SUR      Incremental surface runoff.  Not multiplied by PAREA until
+!                 added to the sum (SSUR)
+!    EUSED    Total ET from the pervious area (PAREA) = E1+E2+E3
+!    TBF      Total baseflow
+!    BFCC     Baseflow channel component (reduces TBF by fraction SIDE)
+!    SINTFT   Monthly sum of SIF (NOT USED)
+!    SGWFP    Monthly sum of BFP (NOT USED)
+!    SGWFS    Monthly sum of BFS (NOT USED)
+!    SRECHT   Monthly sum of BFNCC (NOT USED)
+!    SROST    Monthly sum of SSUR (NOT USED)
+!    SRODT    Monthly sum of SDRO (NOT USED)
+!    E4       ET from riparian vegetation using RIVA
+!    SROT     Assuming this is the monthly sum of TCI (NOT USED)
+!    TET      Total evapotranspiration
+!    SETT     Assuming this is the monthly sum of TET (NOT USED)
+!    SE1      Assuming this is the monthly sum of E1 (NOT USED)
+!    SE2      Assuming this is the monthly sum of E2 (NOT USED)
+!    SE3      Assuming this is the monthly sum of E3 (NOT USED)
+!    SE4      Assuming this is the monthly sum of E4 (NOT USED)
+!    SE5      Assuming this is the monthly sum of E5 (NOT USED)
+!    RSUM(7)  Sums of (1) TCI, (2) ROIMP, (3) SDRO, (4) SSUR, (5) SIF,
+!                 (6) BFS, (7) BFP. (NOT USED)
+
+
 
   ! -------------------------------------------------------------------
   ! START ET CALCULATION
