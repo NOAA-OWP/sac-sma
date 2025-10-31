@@ -70,8 +70,10 @@ endif
 
 # --- sac code (fortran 90, different options)
 sac = \
+		duamel.f \
 		ex_sac1.f90 \
-		sac1.f90 
+		sac1.f90 \
+		sac_data_mod.f90
 		
 model_sac = $(patsubst %, $(sac_dir)/%, $(sac))
 
@@ -87,6 +89,7 @@ run_util = \
         runInfoType.f90 \
         modelVarType.f90 \
         ioModule.f90 \
+        sacLogger.f90 \
         runSac.f90 
 
 model_run = $(patsubst %, $(share_dir)/%, $(run_util))
