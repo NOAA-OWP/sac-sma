@@ -34,9 +34,6 @@ IMPLICIT NONE
   INTEGER  :: I, NINC
   LOGICAL  :: bypass_ratio_check = .FALSE. ! <-- NEW FLAG TO FIX GOTO equivalents
 
-  ! Check ADIMC >= UZTWC
-  IF (ADIMC .LT. UZTWC) ADIMC = UZTWC
-
   ! -------------------------------------------------------------------
   ! START ET CALCULATION
   ! -------------------------------------------------------------------
@@ -130,7 +127,6 @@ IMPLICIT NONE
   SBF=0.0_dp; SSUR=0.0_dp; SIF=0.0_dp; SPERC=0.0_dp; SDRO=0.0_dp; SPBF=0.0_dp
 
   NINC = INT(1.0_dp + 0.2_dp * (UZFWC + TWX))
-  IF (NINC .LT. 1) NINC = 1
   
   DINC = (1.0_dp / REAL(NINC, dp)) * DT
   PINC = TWX / REAL(NINC, dp)
@@ -153,7 +149,6 @@ IMPLICIT NONE
     ! Baseflow (BF)
     BF = LZFPC * DLZP
     LZFPC = LZFPC - BF
-    IF (LZFPC .LT. 0.0_dp) LZFPC = 0.0_dp ! <-- ADDED ZERO CLAMP
     IF (LZFPC .LT. 0.0001_dp) THEN
       BF = BF + LZFPC
       LZFPC = 0.0_dp
@@ -163,7 +158,6 @@ IMPLICIT NONE
     
     BF = LZFSC * DLZS
     LZFSC = LZFSC - BF
-    IF (LZFSC .LT. 0.0_dp) LZFSC = 0.0_dp ! <-- ADDED ZERO CLAMP
     IF (LZFSC .LT. 0.0001_dp) THEN
       BF = BF + LZFSC
       LZFSC = 0.0_dp
@@ -171,114 +165,86 @@ IMPLICIT NONE
     SBF = SBF + BF
     
     ! Percolation (PERC)
-    IF ((PINC + UZFWC) .LT. 0.01_dp) THEN
+    IF ((PINC + UZFWC) .LE. 0.01_dp) THEN
       UZFWC = UZFWC + PINC
+      ADIMC=ADIMC+PINC-ADDRO-ADSUR
+      IF (ADIMC.GT.(UZTWM+LZTWM)) THEN
+        ADDRO=ADDRO+ADIMC-(UZTWM+LZTWM)
+        ADIMC=UZTWM+LZTWM
+      ENDIF
+      SDRO=SDRO+ADDRO*ADIMP
+      CONTINUE
+    ENDIF
+    PERCM = LZFPM * DLZP + LZFSM * DLZS
+    PERC = PERCM * (UZFWC / UZFWM)
+    DEFR = 1.0_dp - ((LZTWC + LZFPC + LZFSC) / (LZTWM + LZFPM + LZFSM))
+      
+    FR = 1.0_dp
+    FI = 1.0_dp
+      
+    ! Frozen Ground Adjustment
+    IF (IFRZE .NE. 0) THEN
+      UZDEFR = 1.0_dp - ((UZTWC + UZFWC) / (UZTWM + UZFWM))
+      CALL FGFR1(DEFR, FR, FI, LZTWC, LZFSC, LZFPC, LZTWM, LZFPM, LZFSM)
+    END IF
+      
+    PERC = PERC * (1.0_dp + ZPERC * (DEFR ** REXP)) * FR
+      
+    IF (PERC .GE. UZFWC) THEN
+      PERC = UZFWC
+    END IF 
+      
+    UZFWC = UZFWC - PERC
+      
+    CHECK = LZTWC + LZFPC + LZFSC + PERC - LZTWM - LZFPM - LZFSM
+    IF (CHECK .GT. 0.0_dp) THEN
+      PERC = PERC - CHECK
+      UZFWC = UZFWC + CHECK
+    END IF
+      
+    SPERC = SPERC + PERC
+      
+    ! Interflow (DEL)
+    DEL = UZFWC * DUZ * FI
+    SIF = SIF + DEL
+    UZFWC = UZFWC - DEL
+      
+    ! Distribute Percolation to LZ
+    PERCT = PERC * (1.0_dp - PFREE)
+      
+    IF ((PERCT + LZTWC) .LE. LZTWM) THEN
+      LZTWC = LZTWC + PERCT
+      PERCF = 0.0_dp    
     ELSE
-      PERCM = LZFPM * DLZP + LZFSM * DLZS
-      PERC = PERCM * (UZFWC / UZFWM)
-      DEFR = 1.0_dp - ((LZTWC + LZFPC + LZFSC) / (LZTWM + LZFPM + LZFSM))
+      PERCF = PERCT + LZTWC - LZTWM
+      LZTWC = LZTWM    
+    END IF 
       
-      FR = 1.0_dp
-      FI = 1.0_dp
-      
-      ! Frozen Ground Adjustment
-      IF (IFRZE .NE. 0) THEN
-        UZDEFR = 1.0_dp - ((UZTWC + UZFWC) / (UZTWM + UZFWM))
-        CALL FGFR1(DEFR, FR, FI, LZTWC, LZFSC, LZFPC, LZTWM, LZFPM, LZFSM)
-      END IF
-      
-      PERC = PERC * (1.0_dp + ZPERC * (DEFR ** REXP)) * FR
-      
-      IF (PERC .GE. UZFWC) THEN
-        PERC = UZFWC
-      END IF 
-      
-      UZFWC = UZFWC - PERC
-      
-      CHECK = LZTWC + LZFPC + LZFSC + PERC - LZTWM - LZFPM - LZFSM
-      IF (CHECK .GT. 0.0_dp) THEN
-        PERC = PERC - CHECK
-        UZFWC = UZFWC + CHECK
-      END IF
-      
-      SPERC = SPERC + PERC
-      
-      ! Interflow (DEL)
-      DEL = UZFWC * DUZ * FI
-      SIF = SIF + DEL
-      UZFWC = UZFWC - DEL
-      
-      ! Distribute Percolation to LZ
-      PERCT = PERC * (1.0_dp - PFREE)
-      
-      IF ((PERCT + LZTWC) .GT. LZTWM) THEN
-        PERCF = PERCT + LZTWC - LZTWM
-        LZTWC = LZTWM
-      ELSE
-        LZTWC = LZTWC + PERCT
-        PERCF = 0.0_dp
-      END IF 
-      
-      PERCF = PERCF + PERC * PFREE
+    PERCF = PERCF + PERC * PFREE
       
       IF (PERCF .NE. 0.0_dp) THEN
-        ! --- NAN FIX: Added checks for zero capacity ---
-        IF (LZFPM .LT. TINY(LZFPM) .OR. LZFSM .LT. TINY(LZFSM)) THEN
-           ! If capacity is near zero, use a safe default or simpler calculation.
-           ! Assuming both are tiny, this entire PERCF distribution is safely skipped,
-           ! or the fraction is simply 1.0 (all to LZFPM if LZFPM is non-zero).
-           HPL = LZFPM / (LZFPM + LZFSM)
-           IF (ABS(LZFPM + LZFSM) .LT. TINY(LZFPM + LZFSM)) THEN
-               HPL = 0.5_dp ! Default to 50/50 if total capacity is zero
-           END IF
-           
-           RATLP = LZFPC / LZFPM
-           RATLS = LZFSC / LZFSM
-           
-           IF (LZFPM .LT. TINY(LZFPM)) RATLP = 0.0_dp
-           IF (LZFSM .LT. TINY(LZFSM)) RATLS = 0.0_dp
-           
-        ELSE
            HPL = LZFPM / (LZFPM + LZFSM)
            RATLP = LZFPC / LZFPM
            RATLS = LZFSC / LZFSM
+           FRACP=(HPL*2.0*(1.0-RATLP))/((1.0-RATLP)+(1.0-RATLS))
+           IF (FRACP .GT. 1.0_dp) FRACP = 1.0_dp
+           PERCP = PERCF * FRACP
+           PERCS = PERCF - PERCP  
+           LZFSC=LZFSC+PERCS
+           IF(LZFSC.GT.LZFSM)
+             PERCS=PERCS-LZFSC+LZFSM
+             LZFSC=LZFSM
+           ENDIF
+           LZFPC=LZFPC+(PERCF-PERCS)
+           IF (LZFPC.GT.LZFPM)
+             EXCESS=LZFPC-LZFPM
+             LZTWC=LZTWC+EXCESS
+             LZFPC=LZFPM
+           ENDIF
         END IF
-        
-        FRACP_DENOM = (1.0_dp - RATLP) + (1.0_dp - RATLS)
-        
-        IF (ABS(FRACP_DENOM) .LT. TINY(FRACP_DENOM)) THEN
-           FRACP = 1.0_dp 
-        ELSE
-           FRACP = (HPL * 2.0_dp * (1.0_dp - RATLP)) / FRACP_DENOM
-        END IF
-        ! --- END NAN FIX ---
-
-        IF (FRACP .GT. 1.0_dp) FRACP = 1.0_dp
-        
-        PERCP = PERCF * FRACP
-        PERCS = PERCF - PERCP
-        
-        LZFSC = LZFSC + PERCS
-        IF (LZFSC .GT. LZFSM) THEN
-          PERCS = PERCS - LZFSC + LZFSM
-          LZFSC = LZFSM
-        END IF 
-        IF (LZFSC .LT. 0.0_dp) LZFSC = 0.0_dp ! Final Zero Clamp
-        
-        LZFPC = LZFPC + (PERCF - PERCS)
-        
-        IF (LZFPC .GT. LZFPM) THEN
-          EXCESS = LZFPC - LZFPM
-          LZTWC = LZTWC + EXCESS
-          LZFPC = LZFPM
-        END IF
-        IF (LZFPC .LT. 0.0_dp) LZFPC = 0.0_dp ! Final Zero Clamp
-        
-      END IF
       
       ! Distribute PINC (Available Moisture)
       IF (PINC .NE. 0.0_dp) THEN
-        
         IF ((PINC + UZFWC) .GT. UZFWM) THEN
           SUR = PINC + UZFWC - UZFWM
           UZFWC = UZFWM
@@ -390,16 +356,19 @@ SUBROUTINE FGFR1(LZDEFR, FR, FI, LZTWC, LZFSC, LZFPC, LZTWM, LZFPM, LZFSM)
   ! LOGIC
   IF (FINDX .LT. FRTEMP) THEN
     EXP = FRTEMP - FINDX
+    RETURN
+  ELSE
     FSAT = (1.0_dp - SATR) ** EXP
     FDRY = 1.0_dp
-
-    IF (LZDEFR .GT. 0.0_dp) THEN
-      FR = FSAT + (FDRY - FSAT) * (LZDEFR ** FREXP)
-      FI = FR
-    ELSE
-      FR = FSAT
-      FI = FR
-    END IF
+  ENDIF
+  IF (LZDEFR .GT. 0.0_dp) THEN
+    FR = FSAT + (FDRY - FSAT) * (LZDEFR ** FREXP)
+    FI = FR
+    RETURN
+  ELSE
+    FR = FSAT
+    FI = FR
+    RETURN
   END IF
 
 END SUBROUTINE FGFR1
@@ -448,31 +417,111 @@ SUBROUTINE FROST1(PX, SUR, DIR, TA, LWE, WE, ISC, AESC, DT, &
     END IF
   END IF
 
-  IF (.NOT. (FINDX .GE. 0.0_dp .AND. TA .GE. 0.0_dp)) THEN
-
-    IF (LWE .EQ. 0.0_dp .OR. WE .EQ. 0.0_dp .OR. ISC .GT. 0 .AND. AESC .EQ. 0.0_dp) THEN
-      C = CSOIL
+  IF ((FINDX .GE. 0.0_dp) .AND. (TA .GE. 0.0_dp)) THEN
+    IF (FINDX.LT.0.0) THEN
+      CONTINUE
     ELSE
-      IF (ISC .GT. 0) THEN
-        COVER = AESC
+      FGCO(1) = FINDX
+      RETURN
+    ENDIF
+  ENDIF
+   
+  IF ((LWE .EQ. 0.0_dp) .OR. (WE.EQ.0.0_dp)) THEN
+    C = CSOIL
+    IF (TA.GE.0.0) THEN
+      FINDX=FINDX+C*TA+GHC
+      IF (FINDX.LT.0.0) THEN
+        CONTINUE
       ELSE
-        COVER = 1.0_dp
-      END IF
-
-      TWE = WE / COVER
-      C = CSOIL * (1.0_dp - COVER) + CSOIL * ((1.0_dp - CSNOW) ** TWE) * COVER
-    END IF
-
-    IF (TA .LT. 0.0_dp) THEN
-      CFI = -C * SQRT(TA * TA + FINDX * FINDX) - C * FINDX + GHC
-      FINDX = FINDX + CFI
+        FINDX = 0.0_dp
+        FGCO(1)=FINDX
+        RETURN
+      ENDIF
     ELSE
-      FINDX = FINDX + C * TA + GHC
-    END IF
-
-    IF (FINDX .GT. 0.0_dp) FINDX = 0.0_dp
-  END IF
-
-  FGCO(1) = FINDX
+      CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
+      FINDX=FINDX+CFI
+      IF (FINDX.LT.0.0) THEN
+        CONTINUE
+      ELSE
+        FINDX = 0.0_dp
+        FGCO(1)=FINDX
+        RETURN
+      ENDIF
+    ENDIF
+  ELSE IF (ISC.GT.0) THEN
+    COVER=AESC
+    IF (COVER.EQ.0.0) THEN
+      C=CSOIL
+      IF (TA.GE.0.0) THEN
+        FINDX=FINDX+C*TA+GHC
+        IF (FINDX.LT.0.0) THEN
+          CONTINUE
+        ELSE
+          FINDX = 0.0_dp
+          FGCO(1)=FINDX
+          RETURN
+        ENDIF
+      ELSE
+        CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
+        FINDX=FINDX+CFI
+        IF (FINDX.LT.0.0) THEN
+          CONTINUE
+        ELSE
+          FINDX = 0.0_dp
+          FGCO(1)=FINDX
+          RETURN
+        ENDIF
+      ENDIF
+    ELSE
+      TWE=WE/COVER
+      C=CSOIL*(1.0-COVER)+CSOIL*((1.0-CSNOW)**TWE)*COVER
+      IF (TA.GE.0.0) THEN
+        FINDX=FINDX+C*TA+GHC
+        IF (FINDX.LT.0.0) THEN
+          CONTINUE
+        ELSE
+          FINDX = 0.0_dp
+          FGCO(1)=FINDX
+          RETURN
+        ENDIF
+      ELSE
+        CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
+        FINDX=FINDX+CFI
+        IF (FINDX.LT.0.0) THEN
+          CONTINUE
+        ELSE
+          FINDX = 0.0_dp
+          FGCO(1)=FINDX
+          RETURN
+        ENDIF
+      ENDIF        
+    ENDIF
+      
+  ELSE
+    COVER=1.0
+    TWE=WE/COVER
+    C=CSOIL*(1.0-COVER)+CSOIL*((1.0-CSNOW)**TWE)*COVER
+    IF (TA.GE.0.0) THEN
+      FINDX=FINDX+C*TA+GHC
+      IF (FINDX.LT.0.0) THEN
+        CONTINUE
+      ELSE
+        FINDX = 0.0_dp
+        FGCO(1)=FINDX
+        RETURN
+      ENDIF
+    ELSE
+      CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
+      FINDX=FINDX+CFI
+      IF (FINDX.LT.0.0) THEN
+        CONTINUE
+      ELSE
+        FINDX = 0.0_dp
+        FGCO(1)=FINDX
+        RETURN
+      ENDIF
+    ENDIF
+  ENDIF
+  RETURN
 
 END SUBROUTINE FROST1
