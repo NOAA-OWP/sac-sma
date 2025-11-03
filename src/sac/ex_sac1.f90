@@ -42,6 +42,15 @@ SUBROUTINE EXSAC(NSOLD, DTM, PCP, TMP, ETP, &
   DT = DTM / 86400.0_dp
   EP1 = ETP
   P1 = PCP
+
+  ! Dynamically set the IFRZE flag based on the air temperature
+  ! reaching the freezing point, which will then turn on frozen
+  ! ground processes
+  IF (TMP .LE. 0.0_dp) THEN
+    IFRZE = 1
+  ELSE
+    IFRZE = 0
+  ENDIF
   
   ! CALL SAC1: Argument list must pass ALL state and parameter variables.
   CALL SAC1(DT, P1, EP1, TCI, ROIMP, SDRO, SSUR, SIF, BFS, BFP, ETA, BFNCC, &
