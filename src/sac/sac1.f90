@@ -457,8 +457,6 @@ IMPLICIT NONE
       
       SDRO = SDRO + ADDRO * ADIMP
       
-    END IF
-
   ! END OF INCREMENTAL DO LOOP. 
   END DO
 
