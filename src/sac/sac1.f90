@@ -411,13 +411,13 @@ IMPLICIT NONE
            PERCP = PERCF * FRACP
            PERCS = PERCF - PERCP  
            LZFSC=LZFSC+PERCS
-           IF(LZFSC.GT.LZFSM)
+           IF(LZFSC.GT.LZFSM) THEN
              PERCS=PERCS-LZFSC+LZFSM
              LZFSC=LZFSM
            ENDIF
            LZFPC=LZFPC+(PERCF-PERCS)
            ! CHECK TO MAKE SURE LZFPC DOES NOT EXCEED LZFPM
-           IF (LZFPC.GT.LZFPM)
+           IF (LZFPC.GT.LZFPM) THEN
              EXCESS=LZFPC-LZFPM
              LZTWC=LZTWC+EXCESS
              LZFPC=LZFPM
