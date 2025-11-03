@@ -54,7 +54,7 @@ SUBROUTINE EXSAC(NSOLD, DTM, PCP, TMP, ETP, &
   
   ! CALL SAC1: Argument list must pass ALL state and parameter variables.
   CALL SAC1(DT, P1, EP1, TCI, ROIMP, SDRO, SSUR, SIF, BFS, BFP, ETA, BFNCC, &
-            IFRZE, TA, LWE, WE, ISC, AESC, &
+            IFRZE, TMP, LWE, WE, ISC, AESC, &
             UZTWM, UZFWM, UZK, PCTIM, ADIMP, RIVA, ZPERC, &
             REXP, LZTWM, LZFSM, LZFPM, LZSK, LZPK, PFREE, SIDE, RSERV, &
             UZTWC, UZFWC, LZTWC, LZFSC, LZFPC, ADIMC)
