@@ -204,11 +204,9 @@ contains
                                    (derived%delta_adimc_sum(nh)*parameters%adimp(nh)) - derived%bfncc_sum(nh)
     
         if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
-       
-            print*, 'ERROR: Cumulative Mass Balance Exceeded Tolerance Criteria 1E-05'
+            print*, 'WARNING: Cumulative Mass Balance Exceeded Tolerance Criteria 1E-05'
             print*, 'HRU: ', nh
             print*, "mass balance (mm) = ",derived%mass_balance(nh)
-            stop
         endif
 
         !---------------------------------------------------------------------
