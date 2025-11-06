@@ -304,7 +304,7 @@ IMPLICIT NONE
     ! COMPUTE BASEFLOW AND KEEP TRACK OF TIME INTERVAL SUM.
     BF = LZFPC * DLZP
     LZFPC = LZFPC - BF
-    IF (LZFPC .LT. 0.0001_dp) THEN
+    IF (LZFPC .LE. 0.0001_dp) THEN
       BF = BF + LZFPC
       LZFPC = 0.0_dp
     END IF
@@ -313,7 +313,7 @@ IMPLICIT NONE
     
     BF = LZFSC * DLZS
     LZFSC = LZFSC - BF
-    IF (LZFSC .LT. 0.0001_dp) THEN
+    IF (LZFSC .LE. 0.0001_dp) THEN
       BF = BF + LZFSC
       LZFSC = 0.0_dp
     END IF
@@ -496,10 +496,10 @@ IMPLICIT NONE
 
   ! SUBTRACT E4 FROM CHANNEL INFLOW
   TCI = TCI - E4
-  !IF (TCI .LT. 0.0_dp) THEN
-  !  E4 = E4 + TCI
-  !  TCI = 0.0_dp
-  !END IF
+  IF (TCI .LT. 0.0_dp) THEN
+    E4 = E4 + TCI
+    TCI = 0.0_dp
+  END IF
   SROT = SROT + TCI
 
   ! COMPUTE TOTAL EVAPOTRANSPIRATION-TET
@@ -564,22 +564,22 @@ SUBROUTINE FGFR1(LZDEFR, FR, FI, LZTWC, LZFSC, LZFPC, LZTWM, LZFPM, LZFSM)
   IF (FINDX .LT. FRTEMP) THEN
     ! COMPUTE SATURATED REDUCTION.
     EXP = FRTEMP - FINDX
-    RETURN
-  ELSE
     FSAT = (1.0_dp - SATR) ** EXP
     ! CHANGE AT DRY CONDITIONS
     FDRY = 1.0_dp
-  ENDIF
-  ! COMPUTE ACTUAL CHANGE
-  IF (LZDEFR .GT. 0.0_dp) THEN
-    FR = FSAT + (FDRY - FSAT) * (LZDEFR ** FREXP)
-    FI = FR
-    RETURN
+    ! COMPUTE ACTUAL CHANGE
+    IF (LZDEFR .GT. 0.0_dp) THEN
+      FR = FSAT + (FDRY - FSAT) * (LZDEFR ** FREXP)
+      FI = FR
+      RETURN
+    ELSE
+      FR = FSAT
+      FI = FR
+      RETURN
+    END IF
   ELSE
-    FR = FSAT
-    FI = FR
     RETURN
-  END IF
+  ENDIF
 
 END SUBROUTINE FGFR1
 
@@ -634,22 +634,57 @@ SUBROUTINE FROST1(PX, SUR, DIR, TA, LWE, WE, ISC, AESC, DT, &
 
   ! CHANGE DUE TO TEMPERATURE.
   IF ((FINDX .GE. 0.0_dp) .AND. (TA .GE. 0.0_dp)) THEN
-    IF (FINDX.LT.0.0) THEN
+    IF (FINDX.LT.0.0_dp) THEN
       CONTINUE
     ELSE
-      FGCO(1) = FINDX
+      FINDX=0.0_dp
+      FGCO(1)=FINDX
       RETURN
     ENDIF
   ENDIF
 
   ! COMPUTE TRANSFER COEFFIENT.
-  IF ((LWE .EQ. 0.0_dp) .OR. (WE.EQ.0.0_dp)) THEN
+  
+  IF (LWE .EQ. 0.0_dp) THEN
     C = CSOIL
     ! COMPUTE CHANGE IN FROST INDEX.
     IF (TA.GE.0.0) THEN
       FINDX=FINDX+C*TA+GHC
       ! CHECK FROST INDEX
-      IF (FINDX.LT.0.0) THEN
+      IF (FINDX.LT.0.0_dp) THEN
+        CONTINUE
+      ELSE
+        FINDX = 0.0_dp
+        ! SAVE NEW FROST INDEX
+        FGCO(1)=FINDX
+        RETURN
+      ENDIF
+  ENDIF
+
+  ! COMPUTE TRANSFER COEFFIENT.
+  IF (WE .EQ. 0.0_dp) THEN
+    C = CSOIL
+    ! COMPUTE CHANGE IN FROST INDEX.
+    IF (TA.GE.0.0) THEN
+      FINDX=FINDX+C*TA+GHC
+      ! CHECK FROST INDEX
+      IF (FINDX.LT.0.0_dp) THEN
+        CONTINUE
+      ELSE
+        FINDX = 0.0_dp
+        ! SAVE NEW FROST INDEX
+        FGCO(1)=FINDX
+        RETURN
+      ENDIF
+  ENDIF
+
+IF (ISC.GT.0.0_dp) THEN
+  COVER=AESC
+  IF (COVER.EQ.0.0_dp) THEN
+    C=CSOIL
+    IF (TA.GE.0.0) THEN
+      FINDX=FINDX+C*TA+GHC
+      IF (FINDX.LT.0.0_dp) THEN
         CONTINUE
       ELSE
         FINDX = 0.0_dp
@@ -660,88 +695,93 @@ SUBROUTINE FROST1(PX, SUR, DIR, TA, LWE, WE, ISC, AESC, DT, &
     ELSE
       CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
       FINDX=FINDX+CFI
-      IF (FINDX.LT.0.0) THEN
+      IF (FINDX.LT.0.0_dp) THEN
         CONTINUE
       ELSE
         FINDX = 0.0_dp
+        ! SAVE NEW FROST INDEX
         FGCO(1)=FINDX
         RETURN
       ENDIF
     ENDIF
-  ELSE IF (ISC.GT.0) THEN
-    COVER=AESC
-    IF (COVER.EQ.0.0) THEN
-      C=CSOIL
-      IF (TA.GE.0.0) THEN
-        FINDX=FINDX+C*TA+GHC
-        IF (FINDX.LT.0.0) THEN
-          CONTINUE
-        ELSE
-          FINDX = 0.0_dp
-          FGCO(1)=FINDX
-          RETURN
-        ENDIF
-      ELSE
-        CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
-        FINDX=FINDX+CFI
-        IF (FINDX.LT.0.0) THEN
-          CONTINUE
-        ELSE
-          FINDX = 0.0_dp
-          FGCO(1)=FINDX
-          RETURN
-        ENDIF
-      ENDIF
-    ELSE
-      TWE=WE/COVER
-      C=CSOIL*(1.0-COVER)+CSOIL*((1.0-CSNOW)**TWE)*COVER
-      IF (TA.GE.0.0) THEN
-        FINDX=FINDX+C*TA+GHC
-        IF (FINDX.LT.0.0) THEN
-          CONTINUE
-        ELSE
-          FINDX = 0.0_dp
-          FGCO(1)=FINDX
-          RETURN
-        ENDIF
-      ELSE
-        CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
-        FINDX=FINDX+CFI
-        IF (FINDX.LT.0.0) THEN
-          CONTINUE
-        ELSE
-          FINDX = 0.0_dp
-          FGCO(1)=FINDX
-          RETURN
-        ENDIF
-      ENDIF        
-    ENDIF
-      
   ELSE
-    COVER=1.0
     TWE=WE/COVER
     C=CSOIL*(1.0-COVER)+CSOIL*((1.0-CSNOW)**TWE)*COVER
     IF (TA.GE.0.0) THEN
       FINDX=FINDX+C*TA+GHC
-      IF (FINDX.LT.0.0) THEN
+      IF (FINDX.LT.0.0_dp) THEN
         CONTINUE
       ELSE
         FINDX = 0.0_dp
+        ! SAVE NEW FROST INDEX
         FGCO(1)=FINDX
         RETURN
       ENDIF
     ELSE
       CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
       FINDX=FINDX+CFI
-      IF (FINDX.LT.0.0) THEN
+      IF (FINDX.LT.0.0_dp) THEN
         CONTINUE
       ELSE
         FINDX = 0.0_dp
+        ! SAVE NEW FROST INDEX
         FGCO(1)=FINDX
         RETURN
       ENDIF
-    ENDIF
+    ENDIF    
   ENDIF
-  RETURN
+ELSE
+  COVER=1.0
+  TWE=WE/COVER
+  C=CSOIL*(1.0-COVER)+CSOIL*((1.0-CSNOW)**TWE)*COVER
+  IF (TA.GE.0.0) THEN
+    FINDX=FINDX+C*TA+GHC
+    IF (FINDX.LT.0.0_dp) THEN
+      CONTINUE
+    ELSE
+      FINDX = 0.0_dp
+      ! SAVE NEW FROST INDEX
+      FGCO(1)=FINDX
+      RETURN
+    ENDIF
+  ELSE
+    CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
+    FINDX=FINDX+CFI
+    IF (FINDX.LT.0.0_dp) THEN
+      CONTINUE
+    ELSE
+      FINDX = 0.0_dp
+      ! SAVE NEW FROST INDEX
+      FGCO(1)=FINDX
+      RETURN
+    ENDIF
+  ENDIF    
+ENDIF
+
+COVER=1.0
+TWE=WE/COVER
+C=CSOIL*(1.0-COVER)+CSOIL*((1.0-CSNOW)**TWE)*COVER
+IF (TA.GE.0.0) THEN
+  FINDX=FINDX+C*TA+GHC
+  IF (FINDX.LT.0.0_dp) THEN
+    CONTINUE
+  ELSE
+    FINDX = 0.0_dp
+    ! SAVE NEW FROST INDEX
+    FGCO(1)=FINDX
+    RETURN
+  ENDIF
+ELSE
+  CFI=-C*SQRT(TA*TA+FINDX*FINDX)-C*FINDX+GHC
+  FINDX=FINDX+CFI
+  IF (FINDX.LT.0.0_dp) THEN
+    CONTINUE
+  ELSE
+    FINDX = 0.0_dp
+    ! SAVE NEW FROST INDEX
+    FGCO(1)=FINDX
+    RETURN
+  ENDIF
+ENDIF     
 
 END SUBROUTINE FROST1
