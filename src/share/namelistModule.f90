@@ -1,4 +1,5 @@
 module defNamelist
+use sac_log_module
 implicit none
 
   ! variable definitions
@@ -60,15 +61,20 @@ contains
     ! Optional namelist_file path/filename to read
     ! if not given, the program looks for 'namelist.input' in run directory as a default
     character(len=*), intent (in), optional :: namelist_file
+    integer :: ios
     
-    print*, 'Reading namelist'
+    call write_log("Reading namelist", LOG_LEVEL_DEBUG)
 
     ! -- open and read namelist file
-    open(33, file=namelist_file, form="formatted")
+    open(33, file=namelist_file, form="formatted", IOSTAT=ios)
+    if (ios /= 0) then
+      call write_log('Error opening namelist file ' // namelist_file, LOG_LEVEL_FATAL)
+    end if
+
     read(33, SAC_CONTROL)
     close(33)
     
-    print*, ' -- simulating basin ', main_id, ' with ', n_hrus, ' hrus'
+    call write_log('-- simulating basin ' //  main_id // ' with ' //  itoa(n_hrus) // ' hrus', LOG_LEVEL_DEBUG)
 
     ! -- transfer to namelist datatype
     this%main_id             = main_id
@@ -88,7 +94,7 @@ contains
     ! -- namelist entry checks --
     if (this%warm_start_run .eq. 1 .and. this%write_states .eq. 1) then
       this%write_states = 0
-      print*, ' -- WARNING: cannot read and write state files at the same time.  Setting write_states option to 0 and continuing'
+      call write_log('Cannot read and write state files at the same time.  Setting write_states option to 0 and continuing',LOG_LEVEL_WARNING)
     endif
 
   end subroutine readNamelist

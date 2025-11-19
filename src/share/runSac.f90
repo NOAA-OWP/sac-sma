@@ -9,8 +9,13 @@ module runModule
   use forcingType
   use modelVarType
   use derivedType
+  use sac_log_module
+  use messagepack
+  use iso_fortran_env
 
   implicit none
+  integer :: warning_count_mass_balance = 0
+  integer :: sac_log_level = LOG_LEVEL_INFO
 
   type, public :: sac_type
     type(namelist_type)   :: namelist
@@ -19,6 +24,7 @@ module runModule
     type(forcing_type)    :: forcing
     type(modelvar_type)   :: modelvar
     type(derived_type)    :: derived
+    byte, dimension(:), allocatable :: serialization_buffer
   end type sac_type
 
 contains
@@ -29,7 +35,7 @@ contains
     implicit none
     
     type(sac_type), target, intent(out) :: model
-    character(len=*), intent (in)          :: config_file ! namelist file from command line argument
+    character(len=*), intent (in)       :: config_file ! namelist file from command line argument
     
     associate(namelist   => model%namelist,   &
               runinfo    => model%runinfo,    &
@@ -38,7 +44,10 @@ contains
               modelvar   => model%modelvar,   &
               derived    => model%derived)
               
-      !-----------------------------------------------------------------------------------------
+    call write_log('Initializing Sac-SMA from file', LOG_LEVEL_INFO)
+    sac_log_level = get_log_level()
+
+    !-----------------------------------------------------------------------------------------
       !  read namelist, initialize data structures and read parameters
       !-----------------------------------------------------------------------------------------
       call namelist%readNamelist(config_file)
@@ -117,6 +126,7 @@ contains
 
   ! == Routing to run the model for one timestep and all spatial sub-units ================================
   SUBROUTINE solve_sac(model)
+    implicit none
     type (sac_type), intent (inout) :: model
 
     ! local parameters
@@ -128,6 +138,8 @@ contains
     real               :: lztwc_0, lzfsc_0, lzfpc_0
     real               :: adimc_0
     real               :: dt_mass_bal
+    character(50)      :: str_real
+
     associate(namelist   => model%namelist,   &
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
@@ -201,12 +213,20 @@ contains
                                    (derived%delta_storage_sum(nh)*(1-parameters%adimp(nh)-parameters%pctim(nh))) - &
                                    (derived%delta_adimc_sum(nh)*parameters%adimp(nh)) - derived%bfncc_sum(nh)
     
-        if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
-            print*, 'WARNING: Cumulative Mass Balance Fail'
-            print*, 'HRU: ', nh
-            print*, "mass balance (mm) = ",derived%mass_balance(nh)
+        !if(ABS(derived%mass_balance(nh)) .GT. 1.0E-5) then
+        if(ABS(derived%mass_balance(nh)) .GT. 1.0E-2) then
+            warning_count_mass_balance = warning_count_mass_balance + 1
+            if ( (sac_log_level <= LOG_LEVEL_DEBUG) .or. (warning_count_mass_balance == 1)) then
+                write(str_real, '(f20.10)' ) ABS(derived%mass_balance(nh))
+                call write_log("Cumulative Mass Balance Fail. Greater than 1.0E-2", LOG_LEVEL_WARNING)
+                call write_log('HRU: ' // itoa(nh) // ' mass balance (mm) = ' // trim(str_real), LOG_LEVEL_WARNING)
+                if (warning_count_mass_balance == 1) then
+                    if (sac_log_level .ne. LOG_LEVEL_DEBUG) then
+                        call write_log("Logging this message only once. Set log level to DEBUG to see all occurrences.", LOG_LEVEL_WARNING)
+                    end if
+                end if
+            end if
         end if
-
 
         !---------------------------------------------------------------------
         ! add results to output file if NGEN_OUTPUT_ACTIVE is undefined
@@ -235,7 +255,11 @@ contains
     
     ! local variables
     integer         :: nh
-      
+    
+    if (warning_count_mass_balance > 0) then
+        call write_log('Cumulative Mass Balance Fail warning occurred ' //  itoa(warning_count_mass_balance) // ' times', LOG_LEVEL_WARNING)
+    end if
+
     !---------------------------------------------------------------------
     ! Compiler directive NGEN_OUTPUT_ACTIVE to be defined if 
     ! Nextgen is writing model output (https://github.com/NOAA-OWP/ngen)
@@ -261,7 +285,143 @@ contains
       close(model%runinfo%state_fileunits(nh))
     end do
 #endif
+    !Free up serialization buffer memory
+    if(allocated(model%serialization_buffer)) then
+      deallocate(model%serialization_buffer)
+    end if
   
   end subroutine cleanup
+
+  SUBROUTINE new_serialization_request (model, exec_status)
+    type(sac_type), intent(inout) :: model
+    integer(kind=int64) :: nh !counter for HRUs
+    class(msgpack), allocatable :: mp
+    class(mp_arr_type), allocatable :: mp_sub_arr
+    class(mp_arr_type), allocatable :: mp_state_arr
+    class(mp_arr_type), allocatable :: mp_hru_arr
+    byte, dimension(:), allocatable :: serialization_buffer
+    integer(kind=int64), intent(out) :: exec_status
+
+    mp = msgpack()
+    mp_hru_arr = mp_arr_type(model%runinfo%n_hrus)
+    do nh=1, model%runinfo%n_hrus
+        mp_sub_arr = mp_arr_type(6)
+        mp_sub_arr%values(1)%obj = mp_float_type(model%modelvar%uztwc(nh)) !uztwc
+        mp_sub_arr%values(2)%obj = mp_float_type(model%modelvar%uzfwc(nh)) !uzfwc
+        mp_sub_arr%values(3)%obj = mp_float_type(model%modelvar%lztwc(nh)) !lztwc
+        mp_sub_arr%values(4)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
+        mp_sub_arr%values(5)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
+        mp_sub_arr%values(6)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
+        mp_hru_arr%values(nh)%obj = mp_sub_arr
+    end do
+
+    !Add the time information and the state variables by HRU to the main mp array.
+    mp_state_arr = mp_arr_type(7)
+    mp_state_arr%values(1)%obj = mp_int_type(model%runinfo%curr_yr) !curr_yr
+    mp_state_arr%values(2)%obj = mp_int_type(model%runinfo%curr_mo) !curr_mo
+    mp_state_arr%values(3)%obj = mp_int_type(model%runinfo%curr_dy) !curr_dy
+    mp_state_arr%values(4)%obj = mp_int_type(model%runinfo%curr_hr) !curr_hr
+    mp_state_arr%values(5)%obj = mp_int_type(model%runinfo%itime) !itime
+    mp_state_arr%values(6)%obj = mp_float_type(model%runinfo%time_dbl) !time_dbl
+    mp_state_arr%values(7)%obj = mp_hru_arr !state variables by hru
+            
+
+    ! pack the data
+    call mp%pack_alloc(mp_state_arr, serialization_buffer)
+    if (mp%failed()) then
+        call write_log("Serialization using messagepack failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+        exec_status = 1
+    else
+        exec_status = 0
+        model%serialization_buffer = serialization_buffer
+        call write_log("Serialization using messagepack successful!", LOG_LEVEL_DEBUG)
+    end if
+  END SUBROUTINE new_serialization_request
+
+  SUBROUTINE deserialize_mp_buffer (model, serialized_data, exec_status)
+    type(sac_type), intent(inout) :: model
+    integer , intent(in) :: serialized_data(:)
+    integer(kind=int64), intent(out) :: exec_status
+    byte, allocatable :: serialized_data_1b(:)
+    class(msgpack), allocatable :: mp
+    class(mp_value_type), allocatable :: mpv
+    class(mp_arr_type), allocatable :: arr
+    class(mp_arr_type), allocatable :: arr_all_hrus
+    class(mp_arr_type), allocatable :: arr_state
+    integer(kind=int64) :: nh, yr, mo, dd, hr, itimestep
+    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc, itime_dbl
+    logical :: status
+    character (len=10) :: datehr
+
+    mp = msgpack()
+    !convert integer(4) to integer(1) for messagepack
+    allocate(serialized_data_1b(size(serialized_data, 1, int64)*4_int64))
+    serialized_data_1b = transfer(serialized_data, serialized_data_1b) 
+    call mp%unpack(serialized_data_1b, mpv)
+    if (is_arr(mpv)) then
+      call get_arr_ref(mpv, arr_state, status) 
+      if (status) then
+        !Update the start and current time for the runInfo.
+        call get_int(arr_state%values(1)%obj, yr, status)
+        model%runinfo%curr_yr = yr
+        call get_int(arr_state%values(2)%obj, mo, status)
+        model%runinfo%curr_mo = mo
+        call get_int(arr_state%values(3)%obj, dd, status)
+        model%runinfo%curr_dy = dd
+        call get_int(arr_state%values(4)%obj, hr, status)
+        model%runinfo%curr_hr = hr
+        write(datehr ,'(I0.4,I0.2,I0.2,I0.2)') yr,mo,dd,hr !format the datestring for comparison next.
+        model%runinfo%curr_datehr = datehr
+        call get_int(arr_state%values(5)%obj, itimestep, status)
+        model%runinfo%itime = itimestep
+        call get_real(arr_state%values(6)%obj, itime_dbl, status)
+        model%runinfo%time_dbl = itime_dbl
+        
+        call get_arr_ref(arr_state%values(7)%obj,arr_all_hrus,status)
+        if(status) then
+          !The number of elements in the serialized HRU data array is expected to match the 
+          !number of HRUs. Check here and report failure if they are not equal.
+          if (arr_all_hrus%numelements() .NE. model%runinfo%n_hrus) then
+            call write_log("The serialized data does not contain state information for all HRUs. Please check inputs", LOG_LEVEL_FATAL)
+            exec_status = 1
+            return
+          end if
+
+          do nh=1, model%runinfo%n_hrus
+            call get_arr_ref(arr_all_hrus%values(nh)%obj,arr,status)
+            if (status) then
+              !Update the state variables for each HRU in the runInfo.
+              call get_real(arr%values(1)%obj, uztwc, status) !uztwc
+              model%modelvar%uztwc(nh) = uztwc  
+              call get_real(arr%values(2)%obj, uzfwc, status) !uzfwc
+              model%modelvar%uzfwc(nh) = uzfwc
+              call get_real(arr%values(3)%obj, lztwc, status) !lztwc
+              model%modelvar%lztwc(nh) = lztwc
+              call get_real(arr%values(4)%obj, lzfsc, status) !lzfsc
+              model%modelvar%lzfsc(nh) = lzfsc
+              call get_real(arr%values(5)%obj, lzfpc, status) !lzfpc
+              model%modelvar%lzfpc(nh) = lzfpc
+              call get_real(arr%values(6)%obj, adimc, status) !adimc
+              model%modelvar%adimc(nh) = adimc   
+            else
+              call write_log("Serialization using messagepack (HRU internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+              exec_status = 1
+              return
+            end if
+          end do
+        else
+          call write_log("Serialization using messagepack (external HRU array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+          exec_status = 1
+          return
+        end if
+      end if
+    end if
+
+    deallocate (mpv)
+    deallocate (serialized_data_1b)
+
+    exec_status = 0
+  
+  END SUBROUTINE deserialize_mp_buffer
 
 end module runModule              
