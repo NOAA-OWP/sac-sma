@@ -128,31 +128,30 @@ debug: model_debug link
 devel: model link
 
 check:
-        echo test
-        echo $(FC)
+	echo test
+	echo $(FC)
 
 
 # compile model code
 model:  $(SAC_DATA_MOD_OBJ)
-        $(FC) $(FLAGS77) -c $(OTHER_SAC_SOURCES) $(INC)
-        $(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
+	$(FC) $(FLAGS77) -c $(OTHER_SAC_SOURCES) $(INC)
+	$(FC) $(FLAGS) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
 
 # Dedicated rule to compile sac_data_mod.f90 and create the .mod file FIRST
 # This fixes the two-run failure problem.
 $(SAC_DATA_MOD_OBJ): $(SAC_DATA_MOD_SRC)
-        $(FC) $(FLAGS) -c $< $(INC)
+	$(FC) $(FLAGS) -c $< $(INC)
 
 model_debug:
-        $(FC) $(FLAGS_DEBUG77) -c $(SAC_DATA_MOD_SRC) $(INC)
-        $(FC) $(FLAGS_DEBUG77) -c $(OTHER_SAC_SOURCES) $(INC)
-        $(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
+	$(FC) $(FLAGS_DEBUG77) -c $(SAC_DATA_MOD_SRC) $(INC)
+	$(FC) $(FLAGS_DEBUG77) -c $(OTHER_SAC_SOURCES) $(INC)
+	$(FC) $(FLAGS_DEBUG) -c $(model_run) $(sac_bmi) $(sac_drv) $(INC)
 
 # link routines
 link:
-#       $(FC) -fPIC -Bstatic_pgi -rpath,/usr/local/netcdf4-pgi/lib *.o -I./ $(LIBNETCDF) -o $(EXE)
-        $(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o
+	$(FC) -fPIC -I./ $(LIB) -o $(EXE) *.o
 
 # Remove object files
 clean:
-        rm -f *.o
-        rm -f *.mod
+	rm -f *.o
+	rm -f *.mod
