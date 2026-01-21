@@ -8,103 +8,94 @@ Primary Language: Fortran
 
 
 ## Dependencies
-Fortran compiler
+- Fortran compiler
+- NextGen ISO C Fortran BMI library (optional)
 
-## Installation and Running in Standalone
+## Running in Standalone
 
 The following describes how to install the run the Sac-SMA as a standalone model.
 
-Clone repository and set up directory
-```
+Clone repository if necessary and change to the repo root directory:
+```bash
 git clone https://github.com/NOAA-OWP/sac-sma.git
 cd sac-sma
-mkdir bin
-cd build
+```
+Generate a CMake build system and directory (in the example below and those that follow, the directory is assumed to be `cmake_build` within the repo root):
+```bash
+# You can also include the '-DCMAKE_BUILD_TYPE=Debug' option if you want to build for debugging
+cmake -B cmake_build -S .
 ```
 
-Define your directory paths and fortran compiler in `Makefile.local`. 
-Compiler options: pgf90, ifort, gfortran
+Note that you may need or want to specify the Fortran compiler, done by supplying a value for the `FC` variable when you generate the build directory.  There are many reasons for that:  maybe you have multiple compilers installed, or maybe your compiler isn't installed to the standard system path or using a standard name CMake will recognize.
 
-```
-make -f Makefile.local
+Regardless, if necessary just append `FC=<path_to_compiler>` to the rest of the command:
+
+```bash
+# Here we are manually telling CMake to use '/opt/local/bin/gfortran-mp-14' as the Fortran compiler, rather than 
+# whatever compiler it would find on its own.
+FC=/opt/local/bin/gfortran-mp-14 cmake -B cmake_build -S .
 ```
 
-You should now see `sac.exe` in the `bin/` directory. 
+With the build directory generated, build the stand-alone executable:
+```bash
+cmake --build cmake_build --target sac
+```
+
+You should now see the `cmake_build/sac` stand-alone executable. 
 
 To run the example provided:
 
-```
+```bash
 cd ../test_cases/ex1/run/
-../../../bin/sac.exe namelist.bmi.HHWM8
+../../../cmake_build/sac namelist.bmi.HHWM8
 ```
 
-## Installation and Running in [Ngen](https://github.com/NOAA-OWP/ngen)
+## Running in [Ngen](https://github.com/NOAA-OWP/ngen)
 
-The following are instructions for setting up this BMI wrapped Sac-SMA model in the Next Generation Water Resources Modeling Framework (ngen) developed by the NOAA's Office of Water Prediction.
+The following are instructions for building the Sac-SMA BMI module shared library.  In particular, this is necessary to run the Sac-SMA model in the [Next Generation Water Resources Modeling Framework](https://github.com/NOAA-OWP/ngen).
 
-Clone ngen and update submodules.
-```
-git clone https://github.com/NOAA-OWP/ngen.git
-cd ngen
-git submodule update --init --recursive
-```
 
-Add Sac-SMA as a submodule.
-```
-git submodule add https://github.com/NOAA-OWP/sac-sma.git ./extern/sac-sma/sac-sma/
+As described above for stand-alone builds, clone the repo if necessary and change into the repo root directory.
+```bash
+git clone https://github.com/NOAA-OWP/sac-sma.git
+cd sac-sma
 ```
 
-Copy the necessary files from the `ngen_files` directory.
-```
-cp ./extern/sac-sma/sac-sma/ngen_files/sacbmi.pc.in ./extern/sac-sma/sac-sma/ngen_files/CMakeLists.txt ./extern/sac-sma
+Within the repo root, once again generate a CMake build directory.  However, this time, we (probably) need to specify the location of the NextGen ISO C Fortran BMI library.  This is an intermediate library needed for any Fortran BMI module to ensure NextGen compatibility.  This is done with the `ISO_C_FORTRAN_BMI_PATH` option
+
+> [!WARNING]
+> If you created stand-alone-only build directory already, remove it first.  Don't worry:  the NextGen-supporting build directory will also support stand-alone builds.
+
+
+```bash
+# The same advice discussed in the stand-alone section about optionally adding 'FC=<path_to_compiler>' and/or 
+# '-DCMAKE_BUILD_TYPE=Debug' applies here
+cmake -B cmake_build -DISO_C_FORTRAN_BMI_PATH=/Users/rbartel/Developer/noaa/ngen/extern/iso_c_fortran_bmi -S .
 ```
 
-Build the model.
-```
-cmake -B extern/sac-sma/cmake_build -S extern/sac-sma
-cmake --build extern/sac-sma/cmake_build --target all
-```
-This should create a library file (libsacbmi.1.0.0.dylib or libsacbmi.1.0.0.so) under /ngen/extern/sac-sma/cmake_build/
+> [!TIP]
+> The directory to use for ISO_C_FORTRAN_BMI_PATH will generally be `<path_to_your_ngen_repo>/extern/iso_c_fortran_bmi`.  It is assumed that you have already cloned the NextGen repo locally.
 
-**NOTE: ngen requires boost libraries.  Check that you have these and that ngen is pointing to the right location (e.g. `echo $BOOST_ROOT`).  If you do not have them, download the libraries. If you have issues with the path, explicitly define it by `export BOOST_ROOT=<path>`. For more information on building the nextgen framework, see the [ngen git repo](https://github.com/NOAA-OWP/ngen/blob/master/INSTALL.md).
 
-Below are instructions for running an example simulation using Sac-SMA in ngen:
-Copy the necessary files to their respective folders.
-```
-cp ./extern/sac-sma/sac-sma/ngen_files/example_realization_w_pet_sac.json ./data
-cp ./extern/sac-sma/sac-sma/ngen_files/sac-init-HHWM8.namelist.input ./data/bmi/fortran/
-cp ./extern/sac-sma/sac-sma/ngen_files/cat-27.csv ./data/forcing/
+With this done when the build directory is created, we will also have access to another build target:  `sacbmi`.   This is how we build the NextGen BMI module shared library:
+
+```bash
+cmake --build cmake_build --target sacbmi
 ```
 
-Make and build the example.
-```
-cmake -B extern/iso_c_fortran_bmi/cmake_build -S extern/iso_c_fortran_bmi
-make -C extern/iso_c_fortran_bmi/cmake_build
+> [!NOTE]
+> You can still build the stand-alone executable as described above when you generate a build directory for NextGen builds.  You can also omit specify a target when building, in which case, CMake will build all valid build targets.
 
-cmake -B extern/sac-sma/cmake_build -S extern/sac-sma 
-make -C extern/sac-sma/cmake_build
-
-cmake -B extern/evapotranspiration/cmake_build -S extern/evapotranspiration/evapotranspiration
-make -C extern/evapotranspiration/cmake_build
-
-cmake -DNGEN_WITH_BMI_FORTRAN=ON -DNGEN_WITH_BMI_C=ON -DNGEN_WITH_PYTHON=ON -B cmake_build -S .
-cmake --build cmake_build --target ngen
+```bash
+cmake --build cmake_build --target sac    # This will build the stand-alone executable, even when generating for NextGen builds
+cmake --build cmake_build                 # This will build the stand-alone executable and the NextGen BMI module shared library
 ```
 
-Create a new directory in the main ngen folder to run the model and keep results.
-``` 
-mkdir sac
-cd sac
-ln -s ../data
-ln -s ../extern
-```
+Once you build the shared library, you should see the shared library in build directory, named `cmake_build/libsacbmi.<version>.so` on Linux systems (on Mac, you will see `.dylib` rather than `.so`).  There will also be `cmake_build/libsacbmi.so` symlink pointing to the shared library file.
 
-Run the model.
-```
-../cmake_build/ngen data/catchment_data.geojson "cat-27" ./data/nexus_data.geojson "nex-26" ./data/example_realization_w_pet_sac.json
-```
+### Example Config
+The [ngen_files/](./ngen_files) directory has a few example configurations that you can use to test running the Sac-SMA model in ngen.  Just make sure to update the path of the Sac-SMA shared library in the `library_file` parameter to point to wherever your build shared library is (you may need to do something similar for the configured PET shared library).
 
-This should generate the files `cat-27.csv` and `nex-26_output.csv`.
 
 ## Parameters
 
