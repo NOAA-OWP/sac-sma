@@ -44,11 +44,14 @@ set(MODEL_SOURCE_DIR ${PARENT_SOURCE_DIR}/sac/)
 set(SHARE_SOURCE_DIR ${PARENT_SOURCE_DIR}/share/)
 
 # Create variables with the source files needed in different contexts
-#file(GLOB MODEL_SOURCES ${PARENT_SOURCE_DIR}/sac/*.f90 ${PARENT_SOURCE_DIR}/driver/*.f90 ${PARENT_SOURCE_DIR}/share/*.f90)
-file(GLOB BMI_SOURCES ${BMI_SOURCES_DIR}*.f90)
-file(GLOB MODEL_SOURCES ${MODEL_SOURCE_DIR}/*.f90)
-file(GLOB DRIVER_SOURCES ${DRIVER_SOURCE_DIR}/*.f90)
-file(GLOB SHARE_SOURCES ${SHARE_SOURCE_DIR}/*.f90)
+set(BMI_SOURCES "src/bmi/bmi.f90" "src/bmi/bmi_sac.f90")
+set(MODEL_SOURCES "src/sac/ex_sac1.f" "src/sac/sac1.f")
+set(DRIVER_SOURCES "src/driver/driver_bmi.f90")
+set(SHARE_SOURCES "src/share/constants.f90" "src/share/dateTimeUtilsModule.f90" "src/share/derivedType.f90"
+	"src/share/forcingType.f90" "src/share/ioModule.f90" "src/share/modelVarType.f90"
+	"src/share/namelistModule.f90" "src/share/nrtype.f90" "src/share/parametersType.f90"
+	"src/share/runInfoType.f90" "src/share/runSac.f90"
+)
 
 add_executable(${SAC_STANDALONE_EXE_NAME} ${MODEL_SOURCES} ${BMI_SOURCES} ${DRIVER_SOURCES} ${SHARE_SOURCES})
 
