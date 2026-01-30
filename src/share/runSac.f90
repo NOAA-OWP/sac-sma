@@ -223,9 +223,6 @@ contains
         end if
 #endif        
       end do  ! end of spatial sub-unit (snowband) loop
-    !if(IS_IT_NAN) then
-    !stop
-    !endif
     end associate ! terminate associate block
     
   END SUBROUTINE solve_sac
