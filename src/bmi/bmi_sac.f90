@@ -1227,6 +1227,15 @@ contains
             deallocate(this%model%serialization_buffer)
          end if
          bmi_status = BMI_SUCCESS
+      case("reset_time")
+         call reset_model_time(this%model, exec_status)
+         if (exec_status == 0) then
+            bmi_status = BMI_SUCCESS
+            call write_log("Time variables reset successfully for state restoring", LOG_LEVEL_INFO)
+         else
+            bmi_status = BMI_FAILURE
+            call write_log(" Failed to reset time variables for state restoring", LOG_LEVEL_FATAL) 
+         end if
       case default
          bmi_status = BMI_FAILURE
          call write_log(" Failed to set integer value for  " // name // "", LOG_LEVEL_WARNING)
