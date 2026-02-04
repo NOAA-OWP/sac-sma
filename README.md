@@ -30,14 +30,15 @@ cmake -B cmake_build -S .
 Note that you may need or want to specify the Fortran compiler, done by supplying a value for the `FC` variable when you generate the build directory.  There are many reasons for that:  maybe you have multiple compilers installed, or maybe your compiler isn't installed to the standard system path or using a standard name CMake will recognize.```
 Regardless, if necessary just append `FC=<path_to_compiler>` to the rest of the command:
 ```bash
-# Here we are manually telling CMake to use '/opt/local/bin/gfortran-mp-14' as the Fortran compiler, rather than 
-# whatever compiler it would find on its own.
+# Here we are manually telling CMake to use '/opt/local/bin/gfortran-mp-14' as the Fortran compiler,
+# rather than whatever compiler it would find on its own.
 FC=/opt/local/bin/gfortran-mp-14 cmake -B cmake_build -S .
 ```
 
 With the build directory generated, build the stand-alone executable:
 ```bash
-cmake --build cmake_build --target sac```
+cmake --build cmake_build --target sac
+```
 
 You should now see the `cmake_build/sac` stand-alone executable. 
 
@@ -46,6 +47,7 @@ To run the example provided:
 ```
 cd ../test_cases/ex1/run/
 ../../../cmake_build/sac namelist.bmi.HHWM8
+```
 
 ## Running in [Ngen](https://github.com/NOAA-OWP/ngen)
 
