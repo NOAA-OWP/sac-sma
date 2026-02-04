@@ -19,6 +19,7 @@ Clone repository and change to project directory
 ```
 git clone https://github.com/NOAA-OWP/sac-sma.git
 cd sac-sma
+```
 
 Generate a CMake build system and directory (in the example below and those that follow, the directory is assumed to be `cmake_build` within the repo root):
 ```bash
@@ -45,7 +46,6 @@ To run the example provided:
 ```
 cd ../test_cases/ex1/run/
 ../../../cmake_build/sac namelist.bmi.HHWM8
-```
 
 ## Running in [Ngen](https://github.com/NOAA-OWP/ngen)
 
