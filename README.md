@@ -56,7 +56,7 @@ The following are instructions for building the Sac-SMA BMI module shared librar
 As described above for stand-alone builds, clone the repo if necessary and change into the repo root directory.
 ```bash
 git clone https://github.com/NOAA-OWP/sac-sma.git
-cd sac-sma```
+cd sac-sma
 ```
 
 Within the repo root, once again generate a CMake build directory.  However, this time, we (probably) need to specify the location of the NextGen ISO C Fortran BMI library.  This is an intermediate library needed for any Fortran BMI module to ensure NextGen compatibility.  This is done with the `ISO_C_FORTRAN_BMI_PATH` option
@@ -79,7 +79,7 @@ cmake --build cmake_build --target sacbmi
 > You can still build the stand-alone executable as described above when you generate a build directory for NextGen builds.  You can also omit specify a target when building, in which case, CMake will build all valid build targets.
 ```bash
 cmake --build cmake_build --target sac    # This will build the stand-alone executable, even when generating for NextGen builds
-cmake --build cmake_build                 # This will build the stand-alone executable and the NextGen BMI module shared library```
+cmake --build cmake_build                 # This will build the stand-alone executable and the NextGen BMI module shared library
 ```
 Once you build the shared library, you should see the shared library in build directory, named `cmake_build/libsacbmi.<version>.so` on Linux systems (on Mac, you will see `.dylib` rather than `.so`).  There will also be `cmake_build/libsacbmi.so` symlink pointing to the shared library file.
 
