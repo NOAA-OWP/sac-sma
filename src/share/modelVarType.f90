@@ -25,6 +25,7 @@ module modelVarType
     real, dimension(:), allocatable    :: bfs    ! channel baseflow component (mm)
     real, dimension(:), allocatable    :: bfp    ! channel baseflow component (mm)
     real, dimension(:), allocatable    :: bfncc  ! baseflow non-channelcomponent (mm)
+    real                               :: nwm_ponded_depth ! GIUH based NWM Ponded Depth (mm)
             
     contains
 
@@ -61,23 +62,24 @@ module modelVarType
     allocate(this%bfp   (1:namelist%n_hrus))
     allocate(this%bfncc (1:namelist%n_hrus))   
 ! -- default assignmtents
-    this%uztwc(:)      = 0.0
-    this%uzfwc(:)      = 0.0 
-    this%lztwc(:)      = 0.0 
-    this%lzfsc(:)      = 0.0 
-    this%lzfpc(:)      = 0.0
-    this%adimc(:)      = 0.0
-    this%qs(:)         = 0.0
-    this%qg(:)         = 0.0
-    this%tci(:)        = 0.0
-    this%eta(:)        = 0.0
-    this%roimp(:)      = 0.0
-    this%sdro(:)       = 0.0
-    this%ssur(:)       = 0.0
-    this%sif(:)        = 0.0
-    this%bfs(:)        = 0.0
-    this%bfp(:)        = 0.0
-    this%bfncc(:)      = 0.0
+    this%uztwc(:)          = 0.0
+    this%uzfwc(:)          = 0.0 
+    this%lztwc(:)          = 0.0 
+    this%lzfsc(:)          = 0.0 
+    this%lzfpc(:)          = 0.0
+    this%adimc(:)          = 0.0
+    this%qs(:)             = 0.0
+    this%qg(:)             = 0.0
+    this%tci(:)            = 0.0
+    this%eta(:)            = 0.0
+    this%roimp(:)          = 0.0
+    this%sdro(:)           = 0.0
+    this%ssur(:)           = 0.0
+    this%sif(:)            = 0.0
+    this%bfs(:)            = 0.0
+    this%bfp(:)            = 0.0
+    this%bfncc(:)          = 0.0
+    this%nwm_ponded_depth  = 0.0
   end subroutine initModelVar
 
 end module modelVarType

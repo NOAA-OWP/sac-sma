@@ -31,6 +31,8 @@ contains
     integer    	            :: ios   ! specify i4b with nrtype?
     integer                 :: pos
     integer                 :: n_params_read, nh  ! counters
+    integer                 :: num_giuh, index ! for GIUH ordinates
+    character(len=50) :: giuh_info = "0.06,0.51,0.28,0.12,0.03" ! temporary until it is included in input parameters file.
   
     !Use assignment instead of declaration+initialization to avoid SAVE attribute gotcha
     ios = 0
@@ -116,6 +118,15 @@ contains
           case ('rserv')
             read(readline, *, iostat=ios) this%rserv
             n_params_read = n_params_read + 1
+          case ('giuh_ordinates')
+            read(readline, *, iostat=ios) this%giuh_info
+            
+            ! Count number of commas to determine size of the ordinates and read them into the array
+            num_giuh = count([(this%giuh_info(index:index)==',', index=1,len_trim(this%giuh_info))]) + 1
+            allocate(this%giuh_ordinates(num_giuh))
+            read(this%giuh_info, *) this%giuh_ordinates
+            this%num_giuh_ordinates = num_giuh
+            n_params_read = n_params_read + 1
           case default
             call write_log("parameter " // param // " not recognized in sac parameter file", LOG_LEVEL_WARNING)
         end select
@@ -126,6 +137,7 @@ contains
     close(unit=51)
   
     ! quick check on completeness
+    ! TODO: Change this check once the GIUH ordinates are included.
     if(n_params_read /= 18) then
       call write_log('Read ' // itoa(n_params_read) // ' Sac-SMA params, but need 18.  Quitting.', LOG_LEVEL_FATAL)
       stop
@@ -137,7 +149,14 @@ contains
     do nh=1, runinfo%n_hrus
       this%total_area = this%total_area + this%hru_area(nh)
     end do
-    
+
+    ! Assign the giuh coordinates. This is a copy of what is in the case statement for giuh_ordinates.
+    num_giuh = count([(this%giuh_info(index:index)==',', index=1,len_trim(this%giuh_info))]) + 1
+    allocate(this%giuh_ordinates(num_giuh))
+    read(this%giuh_info, *) this%giuh_ordinates
+    this%num_giuh_ordinates = num_giuh
+    n_params_read = n_params_read + 1
+
     return
   end subroutine read_sac_parameters
 

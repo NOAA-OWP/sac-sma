@@ -15,6 +15,10 @@ type, public :: parameters_type
   real, dimension(:), allocatable                :: uztwm, uzfwm, lztwm, lzfsm, lzfpm, adimp
   real, dimension(:), allocatable                :: uzk, lzpk, lzsk, zperc, rexp
   real, dimension(:), allocatable                :: pctim, pfree, riva, side, rserv
+  real, dimension(:), allocatable                :: giuh_ordinates
+  character(len=50)                              :: giuh_info
+  integer                                        :: num_giuh_ordinates
+  
   ! derived vars
   real                                           :: total_area  ! total basin area used in averaging outputs
 
@@ -52,7 +56,7 @@ contains
     allocate(this%riva(n_hrus))
     allocate(this%side(n_hrus))
     allocate(this%rserv(n_hrus))    
-
+    allocate(this%giuh_ordinates(n_hrus))
     
     ! assign defaults (if any)
     this%total_area  = huge(1.0)
