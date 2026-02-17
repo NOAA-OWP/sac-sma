@@ -886,7 +886,7 @@ contains
     double precision :: d
     
     if (name == "serialization_create" .or. name == "serialization_size") then
-      nbytes = storage_size(0_int64)/8 !returns size in bits. So, divide by 8 for bytes.
+      nbytes = storage_size(0_int32)/8 !returns size in bits. So, divide by 8 for bytes.
       bmi_status = BMI_SUCCESS
     else if (name == "serialization_state") then
       if(.not.allocated(this%model%serialization_buffer) .or. size(this%model%serialization_buffer) == 0) then
