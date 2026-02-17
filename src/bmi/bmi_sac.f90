@@ -594,8 +594,8 @@ contains
     character (len=*), intent(in) :: name
     character (len=*), intent(out) :: type
     integer :: bmi_status
-    character(len=BMI_MAX_TYPE_NAME) :: ser_create = "uint64" !pads spaces upto 2048.
-    character(len=BMI_MAX_TYPE_NAME) :: ser_size = "uint64" !pads spaces upto 2048
+    character(len=BMI_MAX_TYPE_NAME) :: ser_create = "int" !pads spaces upto 2048.
+    character(len=BMI_MAX_TYPE_NAME) :: ser_size = "int" !pads spaces upto 2048
     character(len=BMI_MAX_TYPE_NAME) :: ser_state = "character" !pads spaces upto 2048
     character(len=BMI_MAX_TYPE_NAME) :: ser_free = "int" !pads spaces upto 2048
 
@@ -624,6 +624,9 @@ contains
        bmi_status = BMI_SUCCESS
     case ('serialization_free')
        type = ser_free
+       bmi_status = BMI_SUCCESS
+    case("reset_time")
+       type = "double"
        bmi_status = BMI_SUCCESS
     case default
        type = "-"
