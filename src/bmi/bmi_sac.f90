@@ -596,7 +596,7 @@ contains
     integer :: bmi_status
     character(len=BMI_MAX_TYPE_NAME) :: ser_create = "int" !pads spaces upto 2048.
     character(len=BMI_MAX_TYPE_NAME) :: ser_size = "int" !pads spaces upto 2048
-    character(len=BMI_MAX_TYPE_NAME) :: ser_state = "character" !pads spaces upto 2048
+    character(len=BMI_MAX_TYPE_NAME) :: ser_state = "int" !pads spaces upto 2048
     character(len=BMI_MAX_TYPE_NAME) :: ser_free = "int" !pads spaces upto 2048
 
     select case(name)
