@@ -59,7 +59,9 @@ git clone https://github.com/NOAA-OWP/sac-sma.git
 cd sac-sma
 ```
 
-Within the repo root, once again generate a CMake build directory.  However, this time, we (probably) need to specify the location of the NextGen ISO C Fortran BMI library.  This is an intermediate library needed for any Fortran BMI module to ensure NextGen compatibility.  This is done with the `ISO_C_FORTRAN_BMI_PATH` option
+Within the repo root, once again generate a CMake build directory. The shared library requires access to the NextGen ISO C Fortran BMI library.  This is an intermediate library needed for any Fortran BMI module to ensure NextGen compatibility.  It is included with ngen, in the extern/iso_c_fortran_bmi subdirectory.  
+
+By default, CMake will look for a copy of iso_c_fortran bmi in the same directory as the sac-sma code. If you prefer, you can set the path to this subdirectory using the `ISO_C_FORTRAN_BMI_PATH` option, as follows;
 
 > [!WARNING]
 > If you created stand-alone-only build directory already, remove it first.  Don't worry:  the NextGen-supporting build directory will also support stand-alone builds.
