@@ -1,26 +1,14 @@
 cmake_minimum_required(VERSION 3.12)
-enable_language( Fortran )
-include(CMakeDependentOption)
-
-# Perhaps in the future set/append to CMAKE_MODULE_PATH and create a cmake directory with helper cmake stuff
-# list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/")
-
 project(sac-sma VERSION 1.0.1 DESCRIPTION "OWP NextGen Sac-SMA Implementation")
+enable_language( Fortran )
 
-# Do this so we can default to ../iso_c_fortran_bmi for bindings if that directory exists
-if (IS_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../iso_c_fortran_bmi)
-    set(DEFAULT_ISO_C_BMI_DIR_VAL ${CMAKE_CURRENT_LIST_DIR}/../iso_c_fortran_bmi)
+if (DEFINED ISO_C_FORTRAN_BMI_PATH)
+   if (NOT IS_DIRECTORY ${ISO_C_FORTRAN_BMI_PATH})
+         message(FATAL_ERROR "Provided CMake option 'ISO_C_FORTRAN_BMI_PATH' is not a valid directory!")
+    endif ()
 else ()
-    set(DEFAULT_ISO_C_BMI_DIR_VAL OFF)
-endif ()
-
-option(ISO_C_FORTRAN_BMI_PATH  "Path to NextGen middleware for ISO C Fortran BMI bindings" ${DEFAULT_ISO_C_BMI_DIR_VAL})
-
-# Syntax: cmake_dependent_option(<option> "<help_text>" <value> <depends> <force>)
-cmake_dependent_option(BMI_SHARED_LIB "Support for building BMI module shared library" ON "ISO_C_FORTRAN_BMI_PATH" OFF)
-
-if (${BMI_SHARED_LIB} AND NOT IS_DIRECTORY ${ISO_C_FORTRAN_BMI_PATH})
-    message(FATAL_ERROR "Provided CMake option 'ISO_C_FORTRAN_BMI_PATH' is not a valid directory!")
+   # Do this so we can default to ../iso_c_fortran_bmi for bindings if that directory exists
+   set(ISO_C_FORTRAN_BMI_PATH "${CMAKE_CURRENT_LIST_DIR}/../iso_c_fortran_bmi")
 endif ()
 
 # TODO: (later) need to figure out the proper analogous compiler settings for -Wall in Intel and nv compilers
@@ -54,20 +42,17 @@ set(SHARE_SOURCES "src/share/constants.f90" "src/share/dateTimeUtilsModule.f90" 
 )
 
 add_executable(${SAC_STANDALONE_EXE_NAME} ${MODEL_SOURCES} ${BMI_SOURCES} ${DRIVER_SOURCES} ${SHARE_SOURCES})
-
-if (BMI_SHARED_LIB AND WIN32)
-    message(FATAL_ERROR "Currently shared library target is not supported on Windows platforms.")
-elseif (BMI_SHARED_LIB)
-    add_subdirectory(${ISO_C_FORTRAN_BMI_PATH} ${CMAKE_BINARY_DIR}/iso_c_bmi)
-    add_library(${SAC_LIB_NAME_CMAKE} SHARED ${BMI_SOURCES} ${MODEL_SOURCES} ${DRIVER_SOURCES} ${SHARE_SOURCES})
-    target_compile_definitions(${SAC_LIB_NAME_CMAKE} PUBLIC BMI_ACTIVE NGEN_FORCING_ACTIVE NGEN_OUTPUT_ACTIVE NGEN_ACTIVE)
-    target_compile_options(${SAC_LIB_NAME_CMAKE} PUBLIC -fPIC)
-    target_link_libraries(${SAC_LIB_NAME_CMAKE} PUBLIC iso_c_bmi)
-    set_target_properties(${SAC_LIB_NAME_CMAKE} PROPERTIES VERSION ${PROJECT_VERSION})
-
-#    include(GNUInstallDirs)
-#
-#    install(TARGETS ${SAC_LIB_NAME_CMAKE}
-#            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+# jbb
+message("ISO Path is ${ISO_C_FORTRAN_BMI_PATH}")
+if (IS_DIRECTORY ${ISO_C_FORTRAN_BMI_PATH})
+   if (WIN32)
+      message(WARNING "Currently shared library target is not supported on Windows platforms.")
+   else ()
+      add_subdirectory(${ISO_C_FORTRAN_BMI_PATH} ${CMAKE_BINARY_DIR}/iso_c_bmi)
+      add_library(${SAC_LIB_NAME_CMAKE} SHARED ${BMI_SOURCES} ${MODEL_SOURCES} ${DRIVER_SOURCES} ${SHARE_SOURCES})
+      target_compile_definitions(${SAC_LIB_NAME_CMAKE} PUBLIC BMI_ACTIVE NGEN_FORCING_ACTIVE NGEN_OUTPUT_ACTIVE NGEN_ACTIVE)
+      target_compile_options(${SAC_LIB_NAME_CMAKE} PUBLIC -fPIC)
+      target_link_libraries(${SAC_LIB_NAME_CMAKE} PUBLIC iso_c_bmi)
+      set_target_properties(${SAC_LIB_NAME_CMAKE} PROPERTIES VERSION ${PROJECT_VERSION})
+   endif ()
 endif ()
