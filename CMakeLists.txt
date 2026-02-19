@@ -42,8 +42,6 @@ set(SHARE_SOURCES "src/share/constants.f90" "src/share/dateTimeUtilsModule.f90" 
 )
 
 add_executable(${SAC_STANDALONE_EXE_NAME} ${MODEL_SOURCES} ${BMI_SOURCES} ${DRIVER_SOURCES} ${SHARE_SOURCES})
-# jbb
-message("ISO Path is ${ISO_C_FORTRAN_BMI_PATH}")
 if (IS_DIRECTORY ${ISO_C_FORTRAN_BMI_PATH})
    if (WIN32)
       message(WARNING "Currently shared library target is not supported on Windows platforms.")
