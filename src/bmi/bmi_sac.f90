@@ -899,7 +899,7 @@ contains
             bmi_status = BMI_FAILURE
          end if
       else
-         nbytes = size(this%model%serialization_buffer)
+         nbytes = sizeof(this%model%serialization_buffer)
          bmi_status = BMI_SUCCESS
       end if
     else if (name == "serialization_free") then 
@@ -961,7 +961,7 @@ contains
             call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
             bmi_status = BMI_FAILURE
          else
-            dest = this%model%serialization_buffer
+            dest(:) = this%model%serialization_buffer(:)
             bmi_status = BMI_SUCCESS
          end if
       case default
