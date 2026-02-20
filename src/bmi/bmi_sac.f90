@@ -953,7 +953,7 @@ contains
             call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
             bmi_status = BMI_FAILURE
          else
-            dest = size(this%model%serialization_buffer)
+            dest = sizeof(this%model%serialization_buffer)
             bmi_status = BMI_SUCCESS
          end if
       case("serialization_state")
