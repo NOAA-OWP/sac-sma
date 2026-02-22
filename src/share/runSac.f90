@@ -10,6 +10,7 @@ module runModule
   use modelVarType
   use derivedType
   use sac_log_module
+  use giuhModule
   use messagepack
   use iso_fortran_env
 
@@ -100,18 +101,22 @@ contains
       endif
 #endif
 
+      !---------------------------------------------------------------------
+      ! Lastly, initialize the runoff_queue_mm for the giuh_convolution_integral
+      !---------------------------------------------------------------------
+      allocate(modelvar%runoff_queue_mm(parameters%num_giuh_ordinates + 1, runinfo%n_hrus))
+      modelvar%runoff_queue_mm = 0.0
     end associate ! terminate the associate block
 
   END SUBROUTINE initialize_from_file                
-              
-             
-             
+
   ! == Move the model ahead one time step ================================================================
   SUBROUTINE advance_in_time(model)
     type (sac_type), intent (inout) :: model
     
     ! -- run sac for one time step
     call solve_sac(model)
+    
     ! -- advance run time info
     model%runinfo%itime         = model%runinfo%itime + 1                            ! increment the integer time by 1
     !model%runinfo%time_dbl     = dble(model%runinfo%time_dbl + model%runinfo%dt)    ! increment relative model run time in seconds by DT
@@ -139,7 +144,7 @@ contains
     real               :: adimc_0
     real               :: dt_mass_bal
     character(50)      :: str_real
-
+    
     associate(namelist   => model%namelist,   &
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
@@ -153,7 +158,7 @@ contains
 #ifndef NGEN_FORCING_ACTIVE
       call read_areal_forcing(namelist, parameters, runinfo, forcing)
 #endif
-
+      
       !---------------------------------------------------------------------
       ! call the main sac state update routine in loop over spatial sub-units
       !---------------------------------------------------------------------
@@ -188,8 +193,14 @@ contains
                     ! Sac Outputs
                     modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), modelvar%eta(nh), &
                     modelvar%roimp(nh), modelvar%sdro(nh), modelvar%ssur(nh), &
-                    modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh), modelvar%bfncc(nh) )   
-                                                   
+                    modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh), modelvar%bfncc(nh) )
+
+        !Obtain the GIUH corrected channel inflow
+        modelvar%tci_giuh(nh) = giuh_convolution_integral(modelvar%tci(nh), parameters%giuh_ordinates, modelvar%runoff_queue_mm(:,nh))
+
+        !Obtain the NWM ponded depth as the sum of the runoff queue in this timestep
+        modelvar%nwm_ponded_depth(nh) = sum(modelvar%runoff_queue_mm(:,nh))
+
         !---------------------------------------------------------------------
         ! Mass balance check
         !---------------------------------------------------------------------
@@ -305,13 +316,14 @@ contains
     mp = msgpack()
     mp_hru_arr = mp_arr_type(model%runinfo%n_hrus)
     do nh=1, model%runinfo%n_hrus
-        mp_sub_arr = mp_arr_type(6)
+        mp_sub_arr = mp_arr_type(7)
         mp_sub_arr%values(1)%obj = mp_float_type(model%modelvar%uztwc(nh)) !uztwc
         mp_sub_arr%values(2)%obj = mp_float_type(model%modelvar%uzfwc(nh)) !uzfwc
         mp_sub_arr%values(3)%obj = mp_float_type(model%modelvar%lztwc(nh)) !lztwc
         mp_sub_arr%values(4)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
         mp_sub_arr%values(5)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
         mp_sub_arr%values(6)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
+        mp_sub_arr%values(7)%obj = mp_float_type(model%modelvar%nwm_ponded_depth(nh)) !nwm_ponded_depth
         mp_hru_arr%values(nh)%obj = mp_sub_arr
     end do
 
@@ -349,7 +361,7 @@ contains
     class(mp_arr_type), allocatable :: arr_all_hrus
     class(mp_arr_type), allocatable :: arr_state
     integer(kind=int64) :: nh, yr, mo, dd, hr, itimestep
-    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc, itime_dbl
+    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc, itime_dbl, nwm_ponded_depth
     logical :: status
     character (len=10) :: datehr
 
@@ -402,7 +414,9 @@ contains
               call get_real(arr%values(5)%obj, lzfpc, status) !lzfpc
               model%modelvar%lzfpc(nh) = lzfpc
               call get_real(arr%values(6)%obj, adimc, status) !adimc
-              model%modelvar%adimc(nh) = adimc   
+              model%modelvar%adimc(nh) = adimc
+              call get_real(arr%values(7)%obj, nwm_ponded_depth, status) !nwm_ponded_depth
+              model%modelvar%nwm_ponded_depth(nh) = nwm_ponded_depth   
             else
               call write_log("Serialization using messagepack (HRU internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
               exec_status = 1

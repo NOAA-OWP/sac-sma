@@ -25,7 +25,9 @@ module modelVarType
     real, dimension(:), allocatable    :: bfs    ! channel baseflow component (mm)
     real, dimension(:), allocatable    :: bfp    ! channel baseflow component (mm)
     real, dimension(:), allocatable    :: bfncc  ! baseflow non-channelcomponent (mm)
-    real                               :: nwm_ponded_depth ! GIUH based NWM Ponded Depth (mm)
+    real, dimension(:), allocatable    :: tci_giuh ! total channel inflow corrected with giuh (mm)
+    real(kind=8), allocatable          :: runoff_queue_mm(:, :) ! aggregated runoff with giuh (mm)
+    real, dimension(:), allocatable    :: nwm_ponded_depth ! GIUH based NWM Ponded Depth (mm)
             
     contains
 
@@ -60,8 +62,11 @@ module modelVarType
     allocate(this%sif   (1:namelist%n_hrus))
     allocate(this%bfs   (1:namelist%n_hrus))
     allocate(this%bfp   (1:namelist%n_hrus))
-    allocate(this%bfncc (1:namelist%n_hrus))   
-! -- default assignmtents
+    allocate(this%bfncc (1:namelist%n_hrus))
+    allocate(this%tci_giuh (1:namelist%n_hrus))
+    allocate(this%nwm_ponded_depth(1:namelist%n_hrus))
+
+    ! -- default assignmtents
     this%uztwc(:)          = 0.0
     this%uzfwc(:)          = 0.0 
     this%lztwc(:)          = 0.0 
@@ -79,7 +84,8 @@ module modelVarType
     this%bfs(:)            = 0.0
     this%bfp(:)            = 0.0
     this%bfncc(:)          = 0.0
-    this%nwm_ponded_depth  = 0.0
+    this%tci_giuh(:)       = 0.0
+    this%nwm_ponded_depth(:)  = 0.0
   end subroutine initModelVar
 
 end module modelVarType

@@ -99,7 +99,7 @@ module bmi_sac_module
 
   ! Exchange items
   integer, parameter :: input_item_count = 3
-  integer, parameter :: output_item_count = 12
+  integer, parameter :: output_item_count = 13
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -168,7 +168,8 @@ contains
     output_items(9) = 'bfs'     ! channel baseflow component (mm)
     output_items(10) = 'bfp'    ! channel baseflow component (mm)
     output_items(11) = 'bfncc'  ! non-channel baseflow component (mm)
-    output_items(12) = 'nwm_ponded_depth'  ! NWM GUIH ponded depth (mm)
+    output_items(12) = 'tci_giuh'  ! total channel inflow from upstream corrected with giuh (m)
+    output_items(13) = 'nwm_ponded_depth'  ! NWM ponded depth (m)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -306,8 +307,8 @@ contains
 
     select case(name)
     case('tair', 'precip', 'pet', &                  ! input vars
-         'qs', 'qg', 'tci', 'eta', &                ! output vars
-         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
+         'qs', 'qg', 'tci', 'eta', 'tci_giuh', &                ! output vars
+         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'nwm_ponded_depth')
        grid = 0
        bmi_status = BMI_SUCCESS
     case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
@@ -602,7 +603,7 @@ contains
 
     select case(name)
     case('tair', 'precip', 'pet',  &                ! input vars
-         'qs', 'qg', 'tci', 'eta', 'nwm_ponded_depth', &                ! output vars
+         'qs', 'qg', 'tci', 'eta', 'tci_giuh', 'nwm_ponded_depth', &                ! output vars
          'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
        type = "real"
        bmi_status = BMI_SUCCESS
@@ -659,8 +660,11 @@ contains
     case("tci")
        units = "m"
        bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       units = "m"
+       bmi_status = BMI_SUCCESS
     case("nwm_ponded_depth")
-       units = "mm"
+       units = "m"
        bmi_status = BMI_SUCCESS
     case("eta")
        units = "mm"
@@ -787,8 +791,11 @@ contains
     case("tci")
        size = sizeof(this%model%modelvar%tci(1))      ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       size = sizeof(this%model%modelvar%tci_giuh(1))      ! 'sizeof' in gcc & ifort
+       bmi_status = BMI_SUCCESS
     case("nwm_ponded_depth")
-       size = sizeof(this%model%modelvar%nwm_ponded_depth)      ! 'sizeof' in gcc & ifort
+       size = sizeof(this%model%modelvar%nwm_ponded_depth(1))      ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS   
     case("eta")
        size = sizeof(this%model%modelvar%eta(1))
@@ -982,8 +989,11 @@ contains
     case("tci")
        dest(1) = this%model%modelvar%tci(1)/1000.0 !convert mm to m
        bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       dest(1) = this%model%modelvar%tci_giuh(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
     case("nwm_ponded_depth")
-       dest(1) = this%model%modelvar%nwm_ponded_depth
+       dest(1) = this%model%modelvar%nwm_ponded_depth(1)/1000.0 !convert mm to m
        bmi_status = BMI_SUCCESS
     case("eta")
        dest(1) = this%model%modelvar%eta(1)
@@ -1271,8 +1281,11 @@ contains
     case("tci")
        this%model%modelvar%tci(1) = src(1)
        bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       this%model%modelvar%tci_giuh(1) = src(1)
+       bmi_status = BMI_SUCCESS
     case("nwm_ponded_depth")
-       this%model%modelvar%nwm_ponded_depth = src(1)
+       this%model%modelvar%nwm_ponded_depth(1) = src(1)
        bmi_status = BMI_SUCCESS
     case("eta")
        this%model%modelvar%eta(1) = src(1)
