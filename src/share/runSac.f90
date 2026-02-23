@@ -195,7 +195,7 @@ contains
                     modelvar%roimp(nh), modelvar%sdro(nh), modelvar%ssur(nh), &
                     modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh), modelvar%bfncc(nh) )
 
-        !Obtain the GIUH corrected channel inflow
+        !Obtain the channel inflow using GIUH
         modelvar%tci_giuh(nh) = giuh_convolution_integral(modelvar%tci(nh), parameters%giuh_ordinates, modelvar%runoff_queue_mm(:,nh))
 
         !Obtain the NWM ponded depth as the sum of the runoff queue in this timestep
@@ -323,7 +323,7 @@ contains
         mp_sub_arr%values(4)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
         mp_sub_arr%values(5)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
         mp_sub_arr%values(6)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
-        mp_sub_arr%values(7)%obj = mp_float_type(model%modelvar%nwm_ponded_depth(nh)) !nwm_ponded_depth
+        mp_sub_arr%values(7)%obj = transfer_values_to_mp(model%modelvar%runoff_queue_mm(:,nh)) !runoff queue for GIUH
         mp_hru_arr%values(nh)%obj = mp_sub_arr
     end do
 
@@ -360,6 +360,7 @@ contains
     class(mp_arr_type), allocatable :: arr
     class(mp_arr_type), allocatable :: arr_all_hrus
     class(mp_arr_type), allocatable :: arr_state
+    class(mp_arr_type), allocatable :: mp_runoff_queue_arr
     integer(kind=int64) :: nh, yr, mo, dd, hr, itimestep
     real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc, itime_dbl, nwm_ponded_depth
     logical :: status
@@ -415,16 +416,18 @@ contains
               model%modelvar%lzfpc(nh) = lzfpc
               call get_real(arr%values(6)%obj, adimc, status) !adimc
               model%modelvar%adimc(nh) = adimc
-              call get_real(arr%values(7)%obj, nwm_ponded_depth, status) !nwm_ponded_depth
-              model%modelvar%nwm_ponded_depth(nh) = nwm_ponded_depth   
+              if (is_arr(arr%values(7)%obj)) then
+                call get_arr_ref(arr%values(7)%obj, mp_runoff_queue_arr, status)
+                model%modelvar%runoff_queue_mm(:,nh) = transfer_values_from_mp(mp_runoff_queue_arr)
+              end if
             else
-              call write_log("Serialization using messagepack (HRU internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+              call write_log("Deserialization using messagepack (HRU internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
               exec_status = 1
               return
             end if
           end do
         else
-          call write_log("Serialization using messagepack (external HRU array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+          call write_log("Deserialization using messagepack (external HRU array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
           exec_status = 1
           return
         end if
@@ -437,5 +440,42 @@ contains
     exec_status = 0
   
   END SUBROUTINE deserialize_mp_buffer
+
+  FUNCTION transfer_values_to_mp (src) RESULT (dest)
+
+    real(kind=8), dimension(:), intent(in) :: src
+    type(mp_arr_type) :: dest
+    integer :: lb, ub, index, arr_size
+
+    lb = LBOUND(src,1)
+    ub = UBOUND(src,1)
+    arr_size = size(src)
+    dest = mp_arr_type(arr_size)
+    
+    do index = lb, ub
+        dest%values(index)%obj = mp_float_type(src(index))
+    end do
+
+  END FUNCTION transfer_values_to_mp
+
+  FUNCTION transfer_values_from_mp (src) RESULT (dest)
+
+    class(mp_arr_type), intent(in) :: src
+    real(kind=8), allocatable, dimension(:) :: dest
+    real(kind=8) :: deserialized_val
+    integer :: index, lb, ub
+    logical :: status
+    
+    lb = lbound(src%values, 1)
+    ub = ubound(src%values, 1)
+
+    allocate(dest(lb:ub))
+    
+    do index = lb, ub
+        call get_real(src%values(index)%obj, deserialized_val, status)
+        dest(index) = deserialized_val
+    end do
+
+  END FUNCTION transfer_values_from_mp
 
 end module runModule              

@@ -168,7 +168,7 @@ contains
     output_items(9) = 'bfs'     ! channel baseflow component (mm)
     output_items(10) = 'bfp'    ! channel baseflow component (mm)
     output_items(11) = 'bfncc'  ! non-channel baseflow component (mm)
-    output_items(12) = 'tci_giuh'  ! total channel inflow from upstream corrected with giuh (m)
+    output_items(12) = 'tci_giuh'  ! total channel inflow from upstream using GIUH (m)
     output_items(13) = 'nwm_ponded_depth'  ! NWM ponded depth (m)
 
     names => output_items

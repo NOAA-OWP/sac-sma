@@ -149,12 +149,13 @@ contains
 
     ! TODO: Delete the following code block once GIUH ordinates are included in params file. 
     ! Assign the giuh coordinates. This is a copy of what is in the case statement for giuh_ordinates.
-    num_giuh = count([(this%giuh_info(index:index)==',', index=1,len_trim(this%giuh_info))]) + 1
-    allocate(this%giuh_ordinates(num_giuh))
-    read(this%giuh_info, *) this%giuh_ordinates
-    this%num_giuh_ordinates = size(this%giuh_ordinates)
-    n_params_read = n_params_read + 1
-
+    if(LEN(TRIM(this%giuh_info)) > 0) then
+      num_giuh = count([(this%giuh_info(index:index)==',', index=1,len_trim(this%giuh_info))]) + 1
+      allocate(this%giuh_ordinates(num_giuh))
+      read(this%giuh_info, *) this%giuh_ordinates
+      this%num_giuh_ordinates = size(this%giuh_ordinates)
+      n_params_read = n_params_read + 1
+    end if
     return
   end subroutine read_sac_parameters
 
