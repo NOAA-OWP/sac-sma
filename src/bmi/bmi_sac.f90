@@ -893,7 +893,7 @@ contains
       if(allocated(this%model%serialization_buffer) .and. size(this%model%serialization_buffer) > 0) then
          nbytes = sizeof(this%model%serialization_buffer)
          bmi_status = BMI_SUCCESS
-      else if (this%model%serialization_buffer > 0) then
+      else if (this%model%serialization_size > 0) then
          nbytes = this%model%serialization_size
          bmi_status = BMI_SUCCESS
       else
