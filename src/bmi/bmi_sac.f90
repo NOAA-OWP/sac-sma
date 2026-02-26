@@ -764,6 +764,7 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(out) :: size
     integer :: bmi_status
+    double precision :: d
 
     select case(name)
     case("precip")
@@ -864,11 +865,12 @@ contains
     case("hru_area")
        size = sizeof(this%model%parameters%hru_area(1))
        bmi_status = BMI_SUCCESS
-    case("serialization_state")
-       size = 1
+    case("serialization_create", "serialization_size", "serialization_free", "serialization_state")
+       size = sizeof(0_int32)
        bmi_status = BMI_SUCCESS
-    case("serialization_create", "serialization_size", "serialization_free", "reset_time")
-       bmi_status = sac_var_nbytes(this, name, size)
+    case("reset_time")
+       size = sizeof(d)
+       bmi_status = BMI_SUCCESS
     case default
        size = -1
        bmi_status = BMI_FAILURE
@@ -878,37 +880,28 @@ contains
 
   ! The size of the given variable.
   function sac_var_nbytes(this, name, nbytes) result (bmi_status)
-    class (bmi_sac), intent(in) :: this
-    character (len=*), intent(in) :: name
-    integer, intent(out) :: nbytes
-    integer :: bmi_status
-    integer :: s1, s2, s3, grid, grid_size, item_size
-    double precision :: d
-    
-    if (name == "serialization_create" .or. name == "serialization_size") then
-      nbytes = storage_size(0_int32)/8 !returns size in bits. So, divide by 8 for bytes.
-      bmi_status = BMI_SUCCESS
-    else if (name == "serialization_state") then
-      if(.not.allocated(this%model%serialization_buffer) .or. size(this%model%serialization_buffer) == 0) then
-         if (this%model%serialization_size > 0) then
-            nbytes = this%model%serialization_size
-            bmi_status = BMI_SUCCESS
-         else
-            nbytes = -1
-            call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
-            bmi_status = BMI_FAILURE
-         end if
-      else
+   class (bmi_sac), intent(in) :: this
+   character (len=*), intent(in) :: name
+   integer, intent(out) :: nbytes
+   integer :: bmi_status
+   integer :: s1, s2, s3, grid, grid_size, item_size
+   double precision :: d
+   select case(name)
+   case("serialization_create", "serialization_size", "serialization_free", "reset_time")
+      bmi_status = sac_var_itemsize(this, name, nbytes)
+   case("serialization_state")
+      if(allocated(this%model%serialization_buffer) .and. size(this%model%serialization_buffer) > 0) then
          nbytes = sizeof(this%model%serialization_buffer)
          bmi_status = BMI_SUCCESS
+      else if (this%model%serialization_buffer > 0) then
+         nbytes = this%model%serialization_size
+         bmi_status = BMI_SUCCESS
+      else
+         call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
+         nbytes = 0
+         bmi_status = BMI_FAILURE
       end if
-    else if (name == "serialization_free") then 
-      nbytes = storage_size(0_int32)/8 !returns size in bits. So, divide by 8 for bytes.
-      bmi_status = BMI_SUCCESS
-    else if (name == "reset_time") then
-      nbytes = storage_size(d) / 8
-      bmi_status = BMI_SUCCESS
-    else
+   case default
       s1 = this%get_var_grid(name, grid)
       s2 = this%get_grid_size(grid, grid_size)
       s3 = this%get_var_itemsize(name, item_size)
@@ -920,7 +913,7 @@ contains
          bmi_status = BMI_FAILURE
          call write_log("nbytes for variable " // name // " not found!", LOG_LEVEL_WARNING)
       end if
-    end if
+   end select
   end function sac_var_nbytes
 
   ! The location (node, face, edge) of the given variable.
@@ -943,6 +936,8 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(inout) :: dest(:)
     integer :: bmi_status, exec_status
+    character(len=20) :: dest_size
+    character(len=20) :: ser_size
     select case(name)
 !     case("model__identification_number")
 !        dest = [this%model%id]
@@ -953,16 +948,25 @@ contains
             call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
             bmi_status = BMI_FAILURE
          else
-            dest = size(this%model%serialization_buffer)
+            dest(:) = size(this%model%serialization_buffer)
             bmi_status = BMI_SUCCESS
          end if
       case("serialization_state")
-         if(.not.allocated(this%model%serialization_buffer) .or. size(this%model%serialization_buffer) == 0) then
+         if(allocated(this%model%serialization_buffer) .and. size(this%model%serialization_buffer) > 0) then
+            if(size(dest) == size(this%model%serialization_buffer)) then
+               dest(:) = this%model%serialization_buffer(:)
+               bmi_status = BMI_SUCCESS
+            else
+               write(dest_size, "(I20)") size(dest)
+               write(ser_size, "(I20)") size(this%model%serialization_buffer)
+               call write_log("The destination size (" // trim(dest_size) &
+                  // ") does not match the serializations size (" // trim(ser_size) // ")", &
+                  LOG_LEVEL_SEVERE)
+               bmi_status = BMI_FAILURE
+            end if
+         else
             call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
             bmi_status = BMI_FAILURE
-         else
-            dest(:) = this%model%serialization_buffer(:)
-            bmi_status = BMI_SUCCESS
          end if
       case default
          dest(:) = -1
