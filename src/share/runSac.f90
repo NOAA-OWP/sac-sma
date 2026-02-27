@@ -201,6 +201,9 @@ contains
         !Obtain the NWM ponded depth as the sum of the runoff queue in this timestep
         modelvar%nwm_ponded_depth(nh) = sum(modelvar%runoff_queue_mm(:,nh))
 
+        !Compute change in storage content at the end of this timestep (used in the soil moisture coupler) 
+        modelvar%uzsmc(nh) = (modelvar%uztwc(nh) - uztwc_0) + (modelvar%uzfwc(nh) - uzfwc_0)
+
         !---------------------------------------------------------------------
         ! Mass balance check
         !---------------------------------------------------------------------

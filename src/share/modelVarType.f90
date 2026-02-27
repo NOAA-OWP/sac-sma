@@ -28,6 +28,7 @@ module modelVarType
     real, dimension(:), allocatable    :: tci_giuh ! total channel inflow with giuh (mm)
     real(kind=8), allocatable          :: runoff_queue_mm(:, :) ! aggregated runoff with giuh (mm)
     real, dimension(:), allocatable    :: nwm_ponded_depth ! GIUH based NWM Ponded Depth (mm)
+    real, dimension(:), allocatable    :: uzsmc  ! Upper zone storage content change (mm)
             
     contains
 
@@ -65,6 +66,7 @@ module modelVarType
     allocate(this%bfncc (1:namelist%n_hrus))
     allocate(this%tci_giuh (1:namelist%n_hrus))
     allocate(this%nwm_ponded_depth(1:namelist%n_hrus))
+    allocate(this%uzsmc(1:namelist%n_hrus))
 
     ! -- default assignmtents
     this%uztwc(:)          = 0.0
@@ -86,6 +88,7 @@ module modelVarType
     this%bfncc(:)          = 0.0
     this%tci_giuh(:)       = 0.0
     this%nwm_ponded_depth(:)  = 0.0
+    this%uzsmc(:)          = 0.0
   end subroutine initModelVar
 
 end module modelVarType

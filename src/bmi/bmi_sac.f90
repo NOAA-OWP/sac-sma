@@ -99,7 +99,7 @@ module bmi_sac_module
 
   ! Exchange items
   integer, parameter :: input_item_count = 3
-  integer, parameter :: output_item_count = 13
+  integer, parameter :: output_item_count = 14
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -170,7 +170,8 @@ contains
     output_items(11) = 'bfncc'  ! non-channel baseflow component (mm)
     output_items(12) = 'tci_giuh'  ! total channel inflow from upstream using GIUH (m)
     output_items(13) = 'nwm_ponded_depth'  ! NWM ponded depth (m)
-
+    output_items(14) = 'uzsmc'  ! upper zone storage content change (m)
+    
     names => output_items
     bmi_status = BMI_SUCCESS
   end function sac_output_var_names
@@ -307,7 +308,7 @@ contains
 
     select case(name)
     case('tair', 'precip', 'pet', &                  ! input vars
-         'qs', 'qg', 'tci', 'eta', 'tci_giuh', &                ! output vars
+         'qs', 'qg', 'tci', 'eta', 'tci_giuh', 'uzsmc' &                ! output vars
          'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'nwm_ponded_depth')
        grid = 0
        bmi_status = BMI_SUCCESS
@@ -821,6 +822,9 @@ contains
     case("bfncc")
        size = sizeof(this%model%modelvar%bfncc(1))
        bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       size = sizeof(this%model%modelvar%uzsmc(1))
+       bmi_status = BMI_SUCCESS       
     case("uztwm")
        size = sizeof(this%model%parameters%uztwm(1))
        bmi_status = BMI_SUCCESS
@@ -994,6 +998,9 @@ contains
        bmi_status = BMI_SUCCESS
     case("nwm_ponded_depth")
        dest(1) = this%model%modelvar%nwm_ponded_depth(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       dest(1) = this%model%modelvar%uzsmc(1)/1000.0 !convert mm to m
        bmi_status = BMI_SUCCESS
     case("eta")
        dest(1) = this%model%modelvar%eta(1)
@@ -1286,6 +1293,9 @@ contains
        bmi_status = BMI_SUCCESS
     case("nwm_ponded_depth")
        this%model%modelvar%nwm_ponded_depth(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       this%model%modelvar%uzsmc(1) = src(1)
        bmi_status = BMI_SUCCESS
     case("eta")
        this%model%modelvar%eta(1) = src(1)
