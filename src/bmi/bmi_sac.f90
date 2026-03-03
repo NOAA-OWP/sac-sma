@@ -682,37 +682,37 @@ contains
        units = "mm"
        bmi_status = BMI_SUCCESS
     case("adimp")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("uzk")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("lzpk")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("lzsk")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("zperc")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("rexp")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("pctim")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("pfree")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("riva")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("side")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case("rserv")
-       units = "mm"
+       units = "1"
        bmi_status = BMI_SUCCESS
     case default
        units = "-"
