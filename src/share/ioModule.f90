@@ -47,6 +47,7 @@ contains
     ! --- now loop through parameter file and assign parameters 
     n_params_read = 0
     ios = 0
+    num_giuh = 0
     do while(ios .eq. 0)
       read(unit=51,FMT='(A)',IOSTAT=ios) readline
   
@@ -127,16 +128,25 @@ contains
           case default
             call write_log("parameter " // param // " not recognized in sac parameter file", LOG_LEVEL_WARNING)
         end select
-  
       end if
   
     end do
     close(unit=51)
-  
+
+    if (num_giuh .EQ. 0) then
+      !This indicates that giuh ordinates ere not provided. Use the default GIUH ordinates.
+      num_giuh = count([(this%giuh_info(index:index)==',', index=1,len_trim(this%giuh_info))]) + 1
+      allocate(this%giuh_ordinates(num_giuh))
+      read(this%giuh_info, *) this%giuh_ordinates
+      this%num_giuh_ordinates = size(this%giuh_ordinates)
+      n_params_read = n_params_read + 1
+      call write_log("No GIUH ordinates provided in sac parameter file. Using default ordinates: [0.06,0.51,0.28,0.12,0.03]", LOG_LEVEL_WARNING)
+    end if
+
     ! quick check on completeness
     ! TODO: Change this check for number of params once the GIUH ordinates are included in params file.
-    if(n_params_read /= 18) then
-      call write_log('Read ' // itoa(n_params_read) // ' Sac-SMA params, but need 18.  Quitting.', LOG_LEVEL_FATAL)
+    if(n_params_read /= 19) then
+      call write_log('Read ' // itoa(n_params_read) // ' Sac-SMA params, but need 19.  Quitting.', LOG_LEVEL_FATAL)
       stop
     end if
     
@@ -149,13 +159,13 @@ contains
 
     ! TODO: Delete the following code block once GIUH ordinates are included in params file. 
     ! Assign the giuh coordinates. This is a copy of what is in the case statement for giuh_ordinates.
-    if(LEN(TRIM(this%giuh_info)) > 0) then
-      num_giuh = count([(this%giuh_info(index:index)==',', index=1,len_trim(this%giuh_info))]) + 1
-      allocate(this%giuh_ordinates(num_giuh))
-      read(this%giuh_info, *) this%giuh_ordinates
-      this%num_giuh_ordinates = size(this%giuh_ordinates)
-      n_params_read = n_params_read + 1
-    end if
+    !if(LEN(TRIM(this%giuh_info)) > 0) then
+    !  num_giuh = count([(this%giuh_info(index:index)==',', index=1,len_trim(this%giuh_info))]) + 1
+    !  allocate(this%giuh_ordinates(num_giuh))
+    !  read(this%giuh_info, *) this%giuh_ordinates
+    !  this%num_giuh_ordinates = size(this%giuh_ordinates)
+    !  n_params_read = n_params_read + 1
+    !end if
     return
   end subroutine read_sac_parameters
 
