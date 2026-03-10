@@ -59,7 +59,6 @@ contains
 
     ! assign defaults (if any)
     this%total_area  = huge(1.0)
-    this%giuh_info="0.06,0.51,0.28,0.12,0.03" !delete this once giuh is included in the parameters file.
     this%num_giuh_ordinates = 0
     
   end subroutine initParams
