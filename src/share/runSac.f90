@@ -203,10 +203,6 @@ contains
 
         !Compute total upper zone storage content at the end of this timestep (used in the soil moisture coupler) 
         modelvar%uzsmc(nh) = modelvar%uztwc(nh) + modelvar%uzfwc(nh)
-        if (modelvar%uzsmc(nh) .EQ. 0) then
-          call write_log("Storage content is zero. Bumping it to 0.01", LOG_LEVEL_WARNING)
-          modelvar%uzsmc(nh) = 0.01
-        end if
 
         !Compute change in storage content at the end of this timestep (used in the soil moisture coupler) 
         modelvar%uzsmc_ch(nh) = (modelvar%uztwc(nh) - uztwc_0) + (modelvar%uzfwc(nh) - uzfwc_0)

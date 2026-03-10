@@ -90,7 +90,7 @@ module modelVarType
     this%bfncc(:)          = 0.0
     this%tci_giuh(:)       = 0.0
     this%nwm_ponded_depth(:)  = 0.0
-    this%uzsmc(:)          = 0.01
+    this%uzsmc(:)          = 0.0
     this%uzsmc_ch(:)       = 0.0
   end subroutine initModelVar
 

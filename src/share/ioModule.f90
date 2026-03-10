@@ -133,16 +133,6 @@ contains
     end do
     close(unit=51)
 
-    if (num_giuh .EQ. 0) then
-      !This indicates that giuh ordinates ere not provided. Use the default GIUH ordinates.
-      num_giuh = count([(this%giuh_info(index:index)==',', index=1,len_trim(this%giuh_info))]) + 1
-      allocate(this%giuh_ordinates(num_giuh))
-      read(this%giuh_info, *) this%giuh_ordinates
-      this%num_giuh_ordinates = size(this%giuh_ordinates)
-      n_params_read = n_params_read + 1
-      call write_log("No GIUH ordinates provided in sac parameter file. Using default ordinates: [0.06,0.51,0.28,0.12,0.03]", LOG_LEVEL_WARNING)
-    end if
-
     ! quick check on completeness
     ! TODO: Change this check for number of params once the GIUH ordinates are included in params file.
     if(n_params_read /= 19) then
