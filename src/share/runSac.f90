@@ -24,7 +24,8 @@ module runModule
     type(forcing_type)    :: forcing
     type(modelvar_type)   :: modelvar
     type(derived_type)    :: derived
-    byte, dimension(:), allocatable :: serialization_buffer
+    integer               :: serialization_size
+    integer, dimension(:), allocatable :: serialization_buffer
   end type sac_type
 
 contains
@@ -46,6 +47,8 @@ contains
               
     call write_log('Initializing Sac-SMA from file', LOG_LEVEL_INFO)
     sac_log_level = get_log_level()
+
+    model%serialization_size = -1
 
     !-----------------------------------------------------------------------------------------
       !  read namelist, initialize data structures and read parameters
@@ -292,6 +295,17 @@ contains
   
   end subroutine cleanup
 
+  SUBROUTINE reset_model_time(model, exec_status)
+    type(sac_type), intent(inout) :: model
+    integer(kind=int64), intent(out) :: exec_status
+    exec_status = 1
+    ! reset time variables to the beginning
+    model%runinfo%itime          = 1                    ! initialize the time loop counter at 1
+    model%runinfo%time_dbl       = 0.d0                 ! start model run at t = 0.0
+    model%runinfo%curr_datetime  = model%runinfo%start_datetime !reset to start time.
+    exec_status = 0
+  END SUBROUTINE reset_model_time
+
   SUBROUTINE new_serialization_request (model, exec_status)
     type(sac_type), intent(inout) :: model
     integer(kind=int64) :: nh !counter for HRUs
@@ -301,6 +315,7 @@ contains
     class(mp_arr_type), allocatable :: mp_hru_arr
     byte, dimension(:), allocatable :: serialization_buffer
     integer(kind=int64), intent(out) :: exec_status
+    integer :: ser_size, ser_ints
 
     mp = msgpack()
     mp_hru_arr = mp_arr_type(model%runinfo%n_hrus)
@@ -333,7 +348,15 @@ contains
         exec_status = 1
     else
         exec_status = 0
-        model%serialization_buffer = serialization_buffer
+        ! add size of serialized data as first four bytes header
+        if (allocated(model%serialization_buffer)) then
+          deallocate(model%serialization_buffer)
+        end if
+        ser_size = size(serialization_buffer)
+        ser_ints = CEILING(real(ser_size) / sizeof(0_int32))
+        allocate(model%serialization_buffer(ser_ints + 1))
+        model%serialization_buffer(1) = ser_size
+        model%serialization_buffer(2:) = transfer(serialization_buffer, model%serialization_buffer(2:))
         call write_log("Serialization using messagepack successful!", LOG_LEVEL_DEBUG)
     end if
   END SUBROUTINE new_serialization_request
@@ -355,8 +378,9 @@ contains
 
     mp = msgpack()
     !convert integer(4) to integer(1) for messagepack
-    allocate(serialized_data_1b(size(serialized_data, 1, int64)*4_int64))
-    serialized_data_1b = transfer(serialized_data, serialized_data_1b) 
+    ! true size of byte data is stored in the first four bytes of the byte data
+    allocate( serialized_data_1b( serialized_data(1) ) )
+    serialized_data_1b = transfer(serialized_data(2:), serialized_data_1b, size=serialized_data(1))
     call mp%unpack(serialized_data_1b, mpv)
     if (is_arr(mpv)) then
       call get_arr_ref(mpv, arr_state, status) 
