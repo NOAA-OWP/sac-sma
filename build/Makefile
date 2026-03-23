@@ -83,6 +83,7 @@ run_util = \
 	nrtype.f90 \
 	sacLogger.f90 \
 	constants.f90 \
+  giuh_utilities.f90 \
 	namelistModule.f90 \
         parametersType.f90 \
         forcingType.f90 \

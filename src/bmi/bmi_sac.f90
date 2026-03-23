@@ -99,7 +99,7 @@ module bmi_sac_module
 
   ! Exchange items
   integer, parameter :: input_item_count = 3
-  integer, parameter :: output_item_count = 12
+  integer, parameter :: output_item_count = 16
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -168,7 +168,11 @@ contains
     output_items(9) = 'bfs'     ! channel baseflow component (mm)
     output_items(10) = 'bfp'    ! channel baseflow component (mm)
     output_items(11) = 'bfncc'  ! non-channel baseflow component (mm)
-    output_items(12) = 'precip_out'  ! rain+melt liquid input (mm/s)
+    output_items(12) = 'tci_giuh'  ! total channel inflow from upstream using GIUH (m)
+    output_items(13) = 'nwm_ponded_depth'  ! NWM ponded depth (m)
+    output_items(14) = 'uzsmc'  ! upper zone total storage content (m)
+    output_items(15) = 'uzsmc_ch'  ! upper zone storage content change (m)
+    output_items(16) = 'precip_out'  ! rain+melt liquid input (mm/s)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -305,8 +309,8 @@ contains
 
     select case(name)
     case('tair', 'precip', 'pet', &                  ! input vars
-         'qs', 'qg', 'tci', 'eta',  &                ! output vars
-         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'precip_out')
+         'qs', 'qg', 'tci', 'eta', 'tci_giuh', 'uzsmc', 'uzsmc_ch', &                ! output vars
+         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'nwm_ponded_depth', 'precip_out')
        grid = 0
        bmi_status = BMI_SUCCESS
     case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
@@ -601,7 +605,7 @@ contains
 
     select case(name)
     case('tair', 'precip', 'pet',  &                ! input vars
-         'qs', 'qg', 'tci', 'eta', &                ! output vars
+         'qs', 'qg', 'tci', 'eta', 'tci_giuh', 'nwm_ponded_depth', 'uzsmc', 'uzsmc_ch', &                ! output vars
          'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'precip_out')
        type = "real"
        bmi_status = BMI_SUCCESS
@@ -659,6 +663,12 @@ contains
        units = "mm"
        bmi_status = BMI_SUCCESS
     case("tci")
+       units = "m"
+       bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       units = "m"
+       bmi_status = BMI_SUCCESS
+    case("nwm_ponded_depth")
        units = "m"
        bmi_status = BMI_SUCCESS
     case("eta")
@@ -747,10 +757,16 @@ contains
        bmi_status = BMI_SUCCESS
     case("side")
        units = "mm"
-       bmi_status = BMI_SUCCESS 
+       bmi_status = BMI_SUCCESS
     case("rserv")
        units = "mm"
-       bmi_status = BMI_SUCCESS 
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("uzsmc_ch")
+       units = "mm"
+       bmi_status = BMI_SUCCESS
     case default
        units = "-"
        bmi_status = BMI_FAILURE
@@ -787,6 +803,12 @@ contains
     case("tci")
        size = sizeof(this%model%modelvar%tci(1))      ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       size = sizeof(this%model%modelvar%tci_giuh(1))      ! 'sizeof' in gcc & ifort
+       bmi_status = BMI_SUCCESS
+    case("nwm_ponded_depth")
+       size = sizeof(this%model%modelvar%nwm_ponded_depth(1))      ! 'sizeof' in gcc & ifort
+       bmi_status = BMI_SUCCESS   
     case("eta")
        size = sizeof(this%model%modelvar%eta(1))
        bmi_status = BMI_SUCCESS
@@ -810,6 +832,12 @@ contains
        bmi_status = BMI_SUCCESS
     case("bfncc")
        size = sizeof(this%model%modelvar%bfncc(1))
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       size = sizeof(this%model%modelvar%uzsmc(1))
+       bmi_status = BMI_SUCCESS
+    case("uzsmc_ch")
+       size = sizeof(this%model%modelvar%uzsmc_ch(1))
        bmi_status = BMI_SUCCESS
     case("uztwm")
        size = sizeof(this%model%parameters%uztwm(1))
@@ -1002,6 +1030,18 @@ contains
        bmi_status = BMI_SUCCESS
     case("tci")
        dest(1) = this%model%modelvar%tci(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       dest(1) = this%model%modelvar%tci_giuh(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("nwm_ponded_depth")
+       dest(1) = this%model%modelvar%nwm_ponded_depth(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       dest(1) = this%model%modelvar%uzsmc(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("uzsmc_ch")
+       dest(1) = this%model%modelvar%uzsmc_ch(1)/1000.0 !convert mm to m
        bmi_status = BMI_SUCCESS
     case("eta")
        dest(1) = this%model%modelvar%eta(1)
@@ -1292,6 +1332,18 @@ contains
     case("tci")
        this%model%modelvar%tci(1) = src(1)
        bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       this%model%modelvar%tci_giuh(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("nwm_ponded_depth")
+       this%model%modelvar%nwm_ponded_depth(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       this%model%modelvar%uzsmc(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("uzsmc_ch")
+       this%model%modelvar%uzsmc_ch(1) = src(1)
+       bmi_status = BMI_SUCCESS
     case("eta")
        this%model%modelvar%eta(1) = src(1)
        bmi_status = BMI_SUCCESS
@@ -1478,7 +1530,7 @@ contains
 !     call print_info(this%model)
 !   end subroutine print_model_info
 #ifdef NGEN_ACTIVE
-  function register_bmi(this) result(bmi_status) bind(C, name="register_bmi")
+  function register_bmi(this) result(bmi_status) bind(C, name="register_bmi_sac")
    use, intrinsic:: iso_c_binding, only: c_ptr, c_loc, c_int
    use iso_c_bmif_2_0
    implicit none
