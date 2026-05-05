@@ -99,7 +99,7 @@ module bmi_sac_module
 
   ! Exchange items
   integer, parameter :: input_item_count = 3
-  integer, parameter :: output_item_count = 16
+  integer, parameter :: output_item_count = 17
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -173,6 +173,7 @@ contains
     output_items(14) = 'uzsmc'  ! upper zone total storage content (m)
     output_items(15) = 'uzsmc_ch'  ! upper zone storage content change (m)
     output_items(16) = 'precip_out'  ! rain+melt liquid input (mm/s)
+    output_items(17) = 'qg_m3_per_s'
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -310,7 +311,7 @@ contains
     select case(name)
     case('tair', 'precip', 'pet', &                  ! input vars
          'qs', 'qg', 'tci', 'eta', 'tci_giuh', 'uzsmc', 'uzsmc_ch', &                ! output vars
-         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'nwm_ponded_depth', 'precip_out')
+         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'nwm_ponded_depth', 'precip_out', 'qg_m3_per_s')
        grid = 0
        bmi_status = BMI_SUCCESS
     case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
@@ -606,7 +607,7 @@ contains
     select case(name)
     case('tair', 'precip', 'pet',  &                ! input vars
          'qs', 'qg', 'tci', 'eta', 'tci_giuh', 'nwm_ponded_depth', 'uzsmc', 'uzsmc_ch', &                ! output vars
-         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'precip_out')
+         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'precip_out', 'qg_m3_per_s')
        type = "real"
        bmi_status = BMI_SUCCESS
     case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
@@ -661,6 +662,9 @@ contains
        bmi_status = BMI_SUCCESS
     case("qg")
        units = "mm"
+       bmi_status = BMI_SUCCESS
+    case("qg_m3_per_s")
+       units = "m3 s-1"
        bmi_status = BMI_SUCCESS
     case("tci")
        units = "m"
@@ -797,7 +801,7 @@ contains
        size = sizeof(this%model%modelvar%qs(1))
 !       size = sizeof(this%model%derived%qs_comb)        ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
-    case("qg")
+    case("qg", "qg_m3_per_s")
        size = sizeof(this%model%modelvar%qg(1))        ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
     case("tci")
@@ -1027,6 +1031,18 @@ contains
        bmi_status = BMI_SUCCESS
     case("qg")
        dest(1) = this%model%modelvar%qg(1)
+       bmi_status = BMI_SUCCESS
+   case("qg_m3_per_s")
+       ! Sac-SMA stores qg as baseflow depth in mm for the timestep.
+       ! qg(1) is the catchment/HRU-level value, so use the matching HRU area
+       ! rather than basin total_area.
+       !
+       ! Conversion:
+       !   mm * 0.001 m/mm * km2 * 1.0e6 m2/km2 / s = m3/s
+       ! which simplifies to:
+       !   mm * km2 * 1000 / s = m3/s
+       dest(1) = this%model%modelvar%qg(1) * this%model%parameters%hru_area(1) * 1000.0 / &
+                 real(this%model%runinfo%dt)
        bmi_status = BMI_SUCCESS
     case("tci")
        dest(1) = this%model%modelvar%tci(1)/1000.0 !convert mm to m
