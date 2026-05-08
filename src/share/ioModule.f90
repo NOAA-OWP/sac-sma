@@ -31,7 +31,7 @@ contains
     integer    	            :: ios   ! specify i4b with nrtype?
     integer                 :: pos
     integer                 :: n_params_read, nh  ! counters
-  
+    integer                 :: num_giuh, index ! for GIUH ordinates
     !Use assignment instead of declaration+initialization to avoid SAVE attribute gotcha
     ios = 0
 
@@ -47,6 +47,7 @@ contains
     ! --- now loop through parameter file and assign parameters 
     n_params_read = 0
     ios = 0
+    num_giuh = 0
     do while(ios .eq. 0)
       read(unit=51,FMT='(A)',IOSTAT=ios) readline
   
@@ -116,18 +117,26 @@ contains
           case ('rserv')
             read(readline, *, iostat=ios) this%rserv
             n_params_read = n_params_read + 1
+          case ('giuh_ordinates')
+            read(readline, *, iostat=ios) this%giuh_info
+            ! Count number of commas to determine size of the ordinates and read them into the array
+            num_giuh = count([(this%giuh_info(index:index)==',', index=1,len_trim(this%giuh_info))]) + 1
+            allocate(this%giuh_ordinates(num_giuh))
+            read(this%giuh_info, *) this%giuh_ordinates
+            this%num_giuh_ordinates = size(this%giuh_ordinates)
+            n_params_read = n_params_read + 1
           case default
             call write_log("parameter " // param // " not recognized in sac parameter file", LOG_LEVEL_WARNING)
         end select
-  
       end if
   
     end do
     close(unit=51)
-  
+
     ! quick check on completeness
-    if(n_params_read /= 18) then
-      call write_log('Read ' // itoa(n_params_read) // ' Sac-SMA params, but need 18.  Quitting.', LOG_LEVEL_FATAL)
+    ! TODO: Change this check for number of params once the GIUH ordinates are included in params file.
+    if(n_params_read /= 19) then
+      call write_log('Read ' // itoa(n_params_read) // ' Sac-SMA params, but need 19.  Quitting.', LOG_LEVEL_FATAL)
       stop
     end if
     
@@ -137,8 +146,7 @@ contains
     do nh=1, runinfo%n_hrus
       this%total_area = this%total_area + this%hru_area(nh)
     end do
-    
-    return
+
   end subroutine read_sac_parameters
 
   ! ==== Open forcings files and read to start of first record
@@ -314,7 +322,7 @@ contains
       write(*,'("Problem opening file ''", A, "''")') trim(filename)
       stop ":  ERROR EXIT"
     endif
-    write(runinfo%output_fileunits(1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta roimp sdro ssur sif bfs bfp bfncc'   ! header
+    write(runinfo%output_fileunits(1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta roimp sdro ssur sif bfs bfp bfncc tci_giuh nwm_ponded_depth'   ! header
 
     ! if user setting is to write out information for each snowband, open the individual files
     if (namelist%output_hrus == 1) then
@@ -332,7 +340,7 @@ contains
         endif
       
         ! Write 1-line header
-        write(runinfo%output_fileunits(nh+1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta roimp sdro ssur sif bfs bfp bfncc'
+        write(runinfo%output_fileunits(nh+1),'(A)') 'year mo dy hr tair precip pet qs qg tci eta roimp sdro ssur sif bfs bfp bfncc tci_giuh nwm_ponded_depth'
         
       end do  ! end loop over sub-units
       
@@ -517,7 +525,8 @@ contains
             modelvar%qs(n_curr_hru), modelvar%qg(n_curr_hru), modelvar%tci(n_curr_hru), & 
             modelvar%eta(n_curr_hru), modelvar%roimp(n_curr_hru), modelvar%sdro(n_curr_hru), &
             modelvar%ssur(n_curr_hru), modelvar%sif(n_curr_hru), modelvar%bfs(n_curr_hru), &
-            modelvar%bfp(n_curr_hru), modelvar%bfncc(n_curr_hru)
+            modelvar%bfp(n_curr_hru), modelvar%bfncc(n_curr_hru), modelvar%tci_giuh(n_curr_hru), &
+            modelvar%nwm_ponded_depth(n_curr_hru)
       if(ierr /= 0) then
         call write_log("ERROR writing output information for basin average. STOPPING.", LOG_LEVEL_FATAL)
         stop
@@ -541,6 +550,8 @@ contains
     derived%bfs_comb       = 0.0
     derived%bfp_comb       = 0.0
     derived%bfncc_comb     = 0.0
+    derived%tci_giuh_comb  = 0.0
+    derived%nwm_ponded_depth_comb = 0.0
         
     if (n_curr_hru .eq. runinfo%n_hrus) then 
       do nh=1, runinfo%n_hrus
@@ -558,6 +569,8 @@ contains
         derived%bfs_comb         = derived%bfs_comb + modelvar%bfs(nh) * parameters%hru_area(nh)
         derived%bfp_comb         = derived%bfp_comb + modelvar%bfp(nh) * parameters%hru_area(nh)
         derived%bfncc_comb       = derived%bfncc_comb + modelvar%bfncc(nh) * parameters%hru_area(nh)
+        derived%tci_giuh_comb         = derived%tci_giuh_comb + modelvar%tci_giuh(nh) * parameters%hru_area(nh)
+        derived%nwm_ponded_depth_comb = derived%nwm_ponded_depth_comb + modelvar%nwm_ponded_depth(nh) * parameters%hru_area(nh)
       end do
 
       ! take average of weighted sum of HRU areas
@@ -575,13 +588,15 @@ contains
       derived%bfs_comb         = derived%bfs_comb / parameters%total_area
       derived%bfp_comb         = derived%bfp_comb / parameters%total_area
       derived%bfncc_comb       = derived%bfncc_comb / parameters%total_area
+      derived%tci_giuh_comb         = derived%tci_giuh_comb / parameters%total_area
+      derived%nwm_ponded_depth_comb = derived%nwm_ponded_depth_comb / parameters%total_area
 
       ! -- write out combined file that is similar to each area file, but add flow variable in CFS units
       write(runinfo%output_fileunits(1), 32, iostat=ierr) runinfo%curr_yr, runinfo%curr_mo, runinfo%curr_dy, runinfo%curr_hr, &
             derived%tair_comb, derived%precip_comb, derived%pet_comb, &
             derived%qs_comb, derived%qg_comb, derived%tci_comb,derived%eta_comb, &
             derived%roimp_comb, derived%sdro_comb, derived%ssur_comb, &
-            derived%sif_comb, derived%bfs_comb, derived%bfp_comb, derived%bfncc_comb
+            derived%sif_comb, derived%bfs_comb, derived%bfp_comb, derived%bfncc_comb, derived%tci_giuh_comb, derived%nwm_ponded_depth_comb
       if(ierr /= 0) then
         call write_log('Error writing output information for sub-unit ' // itoa(n_curr_hru) // '. STOPPING.', LOG_LEVEL_FATAL)      
         stop
