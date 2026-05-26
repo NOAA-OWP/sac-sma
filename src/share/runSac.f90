@@ -10,6 +10,7 @@ module runModule
   use modelVarType
   use derivedType
   use sac_log_module
+  use giuhModule
   use messagepack
   use iso_fortran_env
 
@@ -24,7 +25,8 @@ module runModule
     type(forcing_type)    :: forcing
     type(modelvar_type)   :: modelvar
     type(derived_type)    :: derived
-    byte, dimension(:), allocatable :: serialization_buffer
+    integer               :: serialization_size
+    integer, dimension(:), allocatable :: serialization_buffer
   end type sac_type
 
 contains
@@ -46,6 +48,8 @@ contains
               
     call write_log('Initializing Sac-SMA from file', LOG_LEVEL_INFO)
     sac_log_level = get_log_level()
+
+    model%serialization_size = -1
 
     !-----------------------------------------------------------------------------------------
       !  read namelist, initialize data structures and read parameters
@@ -100,18 +104,22 @@ contains
       endif
 #endif
 
+      !---------------------------------------------------------------------
+      ! Lastly, initialize the runoff_queue_mm for the giuh_convolution_integral
+      !---------------------------------------------------------------------
+      allocate(modelvar%runoff_queue_mm(parameters%num_giuh_ordinates + 1, runinfo%n_hrus))
+      modelvar%runoff_queue_mm = 0.0
     end associate ! terminate the associate block
 
   END SUBROUTINE initialize_from_file                
-              
-             
-             
+
   ! == Move the model ahead one time step ================================================================
   SUBROUTINE advance_in_time(model)
     type (sac_type), intent (inout) :: model
     
     ! -- run sac for one time step
     call solve_sac(model)
+    
     ! -- advance run time info
     model%runinfo%itime         = model%runinfo%itime + 1                            ! increment the integer time by 1
     !model%runinfo%time_dbl     = dble(model%runinfo%time_dbl + model%runinfo%dt)    ! increment relative model run time in seconds by DT
@@ -139,7 +147,7 @@ contains
     real               :: adimc_0
     real               :: dt_mass_bal
     character(50)      :: str_real
-
+    
     associate(namelist   => model%namelist,   &
               runinfo    => model%runinfo,    &
               parameters => model%parameters, &
@@ -153,7 +161,7 @@ contains
 #ifndef NGEN_FORCING_ACTIVE
       call read_areal_forcing(namelist, parameters, runinfo, forcing)
 #endif
-
+      
       !---------------------------------------------------------------------
       ! call the main sac state update routine in loop over spatial sub-units
       !---------------------------------------------------------------------
@@ -188,8 +196,20 @@ contains
                     ! Sac Outputs
                     modelvar%qs(nh), modelvar%qg(nh), modelvar%tci(nh), modelvar%eta(nh), &
                     modelvar%roimp(nh), modelvar%sdro(nh), modelvar%ssur(nh), &
-                    modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh), modelvar%bfncc(nh) )   
-                                                   
+                    modelvar%sif(nh), modelvar%bfs(nh), modelvar%bfp(nh), modelvar%bfncc(nh) )
+
+        !Obtain the channel inflow using GIUH
+        modelvar%tci_giuh(nh) = giuh_convolution_integral(modelvar%tci(nh), parameters%giuh_ordinates, modelvar%runoff_queue_mm(:,nh))
+
+        !Obtain the NWM ponded depth as the sum of the runoff queue in this timestep
+        modelvar%nwm_ponded_depth(nh) = sum(modelvar%runoff_queue_mm(:,nh))
+
+        !Compute total upper zone storage content at the end of this timestep (used in the soil moisture coupler) 
+        modelvar%uzsmc(nh) = modelvar%uztwc(nh) + modelvar%uzfwc(nh)
+
+        !Compute change in storage content at the end of this timestep (used in the soil moisture coupler) 
+        modelvar%uzsmc_ch(nh) = (modelvar%uztwc(nh) - uztwc_0) + (modelvar%uzfwc(nh) - uzfwc_0)
+
         !---------------------------------------------------------------------
         ! Mass balance check
         !---------------------------------------------------------------------
@@ -292,6 +312,17 @@ contains
   
   end subroutine cleanup
 
+  SUBROUTINE reset_model_time(model, exec_status)
+    type(sac_type), intent(inout) :: model
+    integer(kind=int64), intent(out) :: exec_status
+    exec_status = 1
+    ! reset time variables to the beginning
+    model%runinfo%itime          = 1                    ! initialize the time loop counter at 1
+    model%runinfo%time_dbl       = 0.d0                 ! start model run at t = 0.0
+    model%runinfo%curr_datetime  = model%runinfo%start_datetime !reset to start time.
+    exec_status = 0
+  END SUBROUTINE reset_model_time
+
   SUBROUTINE new_serialization_request (model, exec_status)
     type(sac_type), intent(inout) :: model
     integer(kind=int64) :: nh !counter for HRUs
@@ -301,17 +332,19 @@ contains
     class(mp_arr_type), allocatable :: mp_hru_arr
     byte, dimension(:), allocatable :: serialization_buffer
     integer(kind=int64), intent(out) :: exec_status
+    integer :: ser_size, ser_ints
 
     mp = msgpack()
     mp_hru_arr = mp_arr_type(model%runinfo%n_hrus)
     do nh=1, model%runinfo%n_hrus
-        mp_sub_arr = mp_arr_type(6)
+        mp_sub_arr = mp_arr_type(7)
         mp_sub_arr%values(1)%obj = mp_float_type(model%modelvar%uztwc(nh)) !uztwc
         mp_sub_arr%values(2)%obj = mp_float_type(model%modelvar%uzfwc(nh)) !uzfwc
         mp_sub_arr%values(3)%obj = mp_float_type(model%modelvar%lztwc(nh)) !lztwc
         mp_sub_arr%values(4)%obj = mp_float_type(model%modelvar%lzfsc(nh)) !lzfsc
         mp_sub_arr%values(5)%obj = mp_float_type(model%modelvar%lzfpc(nh)) !lzfpc
         mp_sub_arr%values(6)%obj = mp_float_type(model%modelvar%adimc(nh)) !adimc
+        mp_sub_arr%values(7)%obj = transfer_values_to_mp(model%modelvar%runoff_queue_mm(:,nh)) !runoff queue for GIUH
         mp_hru_arr%values(nh)%obj = mp_sub_arr
     end do
 
@@ -333,7 +366,15 @@ contains
         exec_status = 1
     else
         exec_status = 0
-        model%serialization_buffer = serialization_buffer
+        ! add size of serialized data as first four bytes header
+        if (allocated(model%serialization_buffer)) then
+          deallocate(model%serialization_buffer)
+        end if
+        ser_size = size(serialization_buffer)
+        ser_ints = CEILING(real(ser_size) / sizeof(0_int32))
+        allocate(model%serialization_buffer(ser_ints + 1))
+        model%serialization_buffer(1) = ser_size
+        model%serialization_buffer(2:) = transfer(serialization_buffer, model%serialization_buffer(2:))
         call write_log("Serialization using messagepack successful!", LOG_LEVEL_DEBUG)
     end if
   END SUBROUTINE new_serialization_request
@@ -348,15 +389,17 @@ contains
     class(mp_arr_type), allocatable :: arr
     class(mp_arr_type), allocatable :: arr_all_hrus
     class(mp_arr_type), allocatable :: arr_state
+    class(mp_arr_type), allocatable :: mp_runoff_queue_arr
     integer(kind=int64) :: nh, yr, mo, dd, hr, itimestep
-    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc, itime_dbl
+    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc, itime_dbl, nwm_ponded_depth
     logical :: status
     character (len=10) :: datehr
 
     mp = msgpack()
     !convert integer(4) to integer(1) for messagepack
-    allocate(serialized_data_1b(size(serialized_data, 1, int64)*4_int64))
-    serialized_data_1b = transfer(serialized_data, serialized_data_1b) 
+    ! true size of byte data is stored in the first four bytes of the byte data
+    allocate( serialized_data_1b( serialized_data(1) ) )
+    serialized_data_1b = transfer(serialized_data(2:), serialized_data_1b, size=serialized_data(1))
     call mp%unpack(serialized_data_1b, mpv)
     if (is_arr(mpv)) then
       call get_arr_ref(mpv, arr_state, status) 
@@ -402,15 +445,19 @@ contains
               call get_real(arr%values(5)%obj, lzfpc, status) !lzfpc
               model%modelvar%lzfpc(nh) = lzfpc
               call get_real(arr%values(6)%obj, adimc, status) !adimc
-              model%modelvar%adimc(nh) = adimc   
+              model%modelvar%adimc(nh) = adimc
+              if (is_arr(arr%values(7)%obj)) then
+                call get_arr_ref(arr%values(7)%obj, mp_runoff_queue_arr, status)
+                model%modelvar%runoff_queue_mm(:,nh) = transfer_values_from_mp(mp_runoff_queue_arr)
+              end if
             else
-              call write_log("Serialization using messagepack (HRU internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+              call write_log("Deserialization using messagepack (HRU internal array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
               exec_status = 1
               return
             end if
           end do
         else
-          call write_log("Serialization using messagepack (external HRU array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
+          call write_log("Deserialization using messagepack (external HRU array) failed!. Error:" // mp%error_message, LOG_LEVEL_FATAL)
           exec_status = 1
           return
         end if
@@ -423,5 +470,42 @@ contains
     exec_status = 0
   
   END SUBROUTINE deserialize_mp_buffer
+
+  FUNCTION transfer_values_to_mp (src) RESULT (dest)
+
+    real(kind=8), dimension(:), intent(in) :: src
+    type(mp_arr_type) :: dest
+    integer :: lb, ub, index, arr_size
+
+    lb = LBOUND(src,1)
+    ub = UBOUND(src,1)
+    arr_size = size(src)
+    dest = mp_arr_type(arr_size)
+    
+    do index = lb, ub
+        dest%values(index)%obj = mp_float_type(src(index))
+    end do
+
+  END FUNCTION transfer_values_to_mp
+
+  FUNCTION transfer_values_from_mp (src) RESULT (dest)
+
+    class(mp_arr_type), intent(in) :: src
+    real(kind=8), allocatable, dimension(:) :: dest
+    real(kind=8) :: deserialized_val
+    integer :: index, lb, ub
+    logical :: status
+    
+    lb = lbound(src%values, 1)
+    ub = ubound(src%values, 1)
+
+    allocate(dest(lb:ub))
+    
+    do index = lb, ub
+        call get_real(src%values(index)%obj, deserialized_val, status)
+        dest(index) = deserialized_val
+    end do
+
+  END FUNCTION transfer_values_from_mp
 
 end module runModule              
