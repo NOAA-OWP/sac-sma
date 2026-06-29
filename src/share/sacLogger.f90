@@ -19,6 +19,7 @@ module sac_log_module
 
 #ifdef SACSMA_USE_EWTS
   use logger, only: ewts_write_log_module => write_log_module, &
+                    ewts_payload_status => payload_status, &
                     ewts_is_logger_enabled_module => is_logger_enabled_module, &
                     ewts_get_log_level_module => get_log_level_module, &
                     ewts_logger_init_module => logger_init_module, &
@@ -29,7 +30,14 @@ module sac_log_module
                     EWTS_WARNING, &
                     EWTS_SEVERE , &
                     EWTS_FATAL, &
-                    EWTS_STATUS
+                    EWTS_STATUS, &
+                    PAYLOAD_NULL, & 
+                    PAYLOAD_INITTING, &
+                    PAYLOAD_INITTED, &
+                    PAYLOAD_STARTING, &
+                    PAYLOAD_INPROG, &
+                    PAYLOAD_COMPLETE, &
+                    PAYLOAD_ERROR
   use ewts_module_constants, only: EWTS_ID_SAC_SMA
 #else
   use, intrinsic :: iso_c_binding, only: c_long, c_int, c_ptr, c_null_ptr, c_f_pointer, c_associated
@@ -40,6 +48,8 @@ module sac_log_module
 
 
 #ifdef SACSMA_USE_EWTS
+  character(len=*), parameter, public :: LOG_MODULE_ID = EWTS_ID_SAC_SMA
+
   integer, parameter, public :: NOTSET            = EWTS_NOTSET
   integer, parameter, public :: LOG_LEVEL_DEBUG   = EWTS_DEBUG
   integer, parameter, public :: LOG_LEVEL_PERFORM = EWTS_PERFORM
@@ -48,7 +58,17 @@ module sac_log_module
   integer, parameter, public :: LOG_LEVEL_SEVERE  = EWTS_SEVERE
   integer, parameter, public :: LOG_LEVEL_FATAL   = EWTS_FATAL
   integer, parameter, public :: LOG_LEVEL_STATUS  = EWTS_STATUS
+
+  public :: PAYLOAD_NULL 
+  public :: PAYLOAD_INITTING 
+  public :: PAYLOAD_INITTED
+  public :: PAYLOAD_STARTING
+  public :: PAYLOAD_INPROG
+  public :: PAYLOAD_COMPLETE
+  public :: PAYLOAD_ERROR
 #else
+  character(len=*), parameter, public :: LOG_MODULE_ID = "SACSMA"
+
   integer, parameter, public :: NOTSET            = 0
   integer, parameter, public :: LOG_LEVEL_DEBUG   = 10
   integer, parameter, public :: LOG_LEVEL_PERFORM = 15
@@ -63,6 +83,7 @@ module sac_log_module
 #endif
 
   public :: write_log
+  public :: payload_status
   public :: is_logger_enabled, get_log_level
   public :: itoa, rtoa
 
@@ -183,6 +204,36 @@ contains
     flush(6)
 #endif
   end subroutine write_log
+
+  subroutine payload_status(status, prog, msg, modnm)
+    character(len=*), intent(in) :: status
+    real(8), intent(in) :: prog
+    character(len=*), intent(in) :: msg
+    character(len=*), intent(in) :: modnm
+#ifdef SACSMA_USE_EWTS
+    character(len=32) payload_ewts_id
+#endif
+
+#ifdef SACSMA_USE_EWTS
+    call ensure_init()
+
+    if (len_trim(modnm) > 0) then
+        payload_ewts_id = trim(modnm)
+    else
+        payload_ewts_id = LOG_MODULE_ID
+    end if
+
+    call ewts_payload_status( &
+        LOG_MODULE_ID, &
+        trim(status), &
+        prog, &
+        trim(msg), &
+        trim(payload_ewts_id))
+#else
+    ! No payload support in fallback logger.
+#endif
+
+    end subroutine payload_status
 
   logical function is_logger_enabled()
 #ifdef SACSMA_USE_EWTS

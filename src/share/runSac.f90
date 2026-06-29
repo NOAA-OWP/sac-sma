@@ -47,6 +47,10 @@ contains
               derived    => model%derived)
               
     call write_log('Initializing Sac-SMA from file', LOG_LEVEL_INFO)
+#ifdef SACSMA_USE_EWTS
+    call payload_status(PAYLOAD_INITTING, 0.1d0, "", LOG_MODULE_ID)
+#endif
+
     sac_log_level = get_log_level()
 
     model%serialization_size = -1
@@ -110,6 +114,10 @@ contains
       allocate(modelvar%runoff_queue_mm(parameters%num_giuh_ordinates + 1, runinfo%n_hrus))
       modelvar%runoff_queue_mm = 0.0
     end associate ! terminate the associate block
+
+#ifdef SACSMA_USE_EWTS
+    call payload_status(PAYLOAD_INITTED, 0.2d0, "", LOG_MODULE_ID)
+#endif
 
   END SUBROUTINE initialize_from_file                
 
