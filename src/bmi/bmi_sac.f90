@@ -776,6 +776,9 @@ contains
     case("totsmc", "totsmc_ch")
        units = "m"
        bmi_status = BMI_SUCCESS
+    case("hru_area")
+       units = "km2"
+       bmi_status = BMI_SUCCESS
     case default
        units = "-"
        bmi_status = BMI_FAILURE
@@ -1150,7 +1153,7 @@ contains
        bmi_status = BMI_SUCCESS
     case("hru_area")
        dest(1) = this%model%parameters%hru_area(1)
-
+       bmi_status = BMI_SUCCESS
     case default
        dest(:) = -1.0
        bmi_status = BMI_FAILURE
