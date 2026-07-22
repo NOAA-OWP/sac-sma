@@ -766,10 +766,13 @@ contains
        units = "mm"
        bmi_status = BMI_SUCCESS
     case("uzsmc")
-       units = "mm"
+       units = "m"
        bmi_status = BMI_SUCCESS
     case("uzsmc_ch")
-       units = "mm"
+       units = "m"
+       bmi_status = BMI_SUCCESS
+    case("hru_area")
+       units = "km2"
        bmi_status = BMI_SUCCESS
     case default
        units = "-"
@@ -1133,7 +1136,7 @@ contains
        bmi_status = BMI_SUCCESS
     case("hru_area")
        dest(1) = this%model%parameters%hru_area(1)
-
+       bmi_status = BMI_SUCCESS
     case default
        dest(:) = -1.0
        bmi_status = BMI_FAILURE
