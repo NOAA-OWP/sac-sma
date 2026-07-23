@@ -218,6 +218,18 @@ contains
         !Compute change in storage content at the end of this timestep (used in the soil moisture coupler) 
         modelvar%uzsmc_ch(nh) = (modelvar%uztwc(nh) - uztwc_0) + (modelvar%uzfwc(nh) - uzfwc_0)
 
+        ! Total pervious SAC-SMA soil-water storage.
+        modelvar%totsmc(nh) = &
+            modelvar%uztwc(nh) + &
+            modelvar%uzfwc(nh) + &
+            modelvar%lztwc(nh) + &
+            modelvar%lzfsc(nh) + &
+            modelvar%lzfpc(nh)
+
+        ! Net change in total pervious storage during this timestep.
+        modelvar%totsmc_ch(nh) = modelvar%totsmc(nh) - &
+            (uztwc_0 + uzfwc_0 + lztwc_0 + lzfsc_0 + lzfpc_0)
+        
         !---------------------------------------------------------------------
         ! Mass balance check
         !---------------------------------------------------------------------

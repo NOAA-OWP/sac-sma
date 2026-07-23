@@ -31,6 +31,10 @@ module modelVarType
     real, dimension(:), allocatable    :: uzsmc  ! Upper zone soil moisture content (mm)
     real, dimension(:), allocatable    :: uzsmc_ch  ! Upper zone soil moisture content change (mm)
             
+
+    real, dimension(:), allocatable    :: totsmc ! new variables to calculate total soil moisture content
+    real, dimension(:), allocatable    :: totsmc_ch  ! new variables to calculate total soil moisture content change
+
     contains
 
       procedure, public  :: initModelVar
@@ -70,6 +74,9 @@ module modelVarType
     allocate(this%uzsmc(1:namelist%n_hrus))
     allocate(this%uzsmc_ch(1:namelist%n_hrus))
 
+    allocate(this%totsmc(1:namelist%n_hrus))
+    allocate(this%totsmc_ch(1:namelist%n_hrus))
+
     ! -- default assignmtents
     this%uztwc(:)          = 0.0
     this%uzfwc(:)          = 0.0 
@@ -92,6 +99,10 @@ module modelVarType
     this%nwm_ponded_depth(:)  = 0.0
     this%uzsmc(:)          = 0.0
     this%uzsmc_ch(:)       = 0.0
+
+    this%totsmc(:)         = 0.0
+    this%totsmc_ch(:)      = 0.0
+
   end subroutine initModelVar
 
 end module modelVarType
