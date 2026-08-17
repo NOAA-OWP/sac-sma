@@ -432,7 +432,7 @@ contains
     class(mp_arr_type), allocatable :: arr_state
     class(mp_arr_type), allocatable :: mp_runoff_queue_arr
     integer(kind=int64) :: nh, yr, mo, dd, hr, itimestep
-    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc, itime_dbl, nwm_ponded_depth
+    real(kind=real64) :: uztwc, uzfwc, lztwc, lzfsc, lzfpc, adimc, itime_dbl, nwm_ponded_depth, outvar
     logical :: status
     character (len=10) :: datehr
 
@@ -460,8 +460,47 @@ contains
         model%runinfo%itime = itimestep
         call get_real(arr_state%values(6)%obj, itime_dbl, status)
         model%runinfo%time_dbl = itime_dbl
+        !Update output variables
+        call get_real(arr_state%values(7)%obj, outvar, status)
+        model%modelvar%qs(1) = outvar
+        call get_real(arr_state%values(8)%obj, outvar, status)
+        model%modelvar%qg(1) = outvar
+        call get_real(arr_state%values(9)%obj, outvar, status)
+        model%modelvar%tci(1) = outvar
+        call get_real(arr_state%values(10)%obj, outvar, status)
+        model%modelvar%eta(1) = outvar
+        call get_real(arr_state%values(11)%obj, outvar, status)
+        model%modelvar%roimp(1) = outvar
+        call get_real(arr_state%values(12)%obj, outvar, status)
+        model%modelvar%sdro(1) = outvar
+        call get_real(arr_state%values(13)%obj, outvar, status)
+        model%modelvar%ssur(1) = outvar
+        call get_real(arr_state%values(14)%obj, outvar, status)
+        model%modelvar%sif(1) = outvar
+        call get_real(arr_state%values(15)%obj, outvar, status)
+        model%modelvar%bfs(1) = outvar
+        call get_real(arr_state%values(16)%obj, outvar, status)
+        model%modelvar%bfp(1) = outvar
+        call get_real(arr_state%values(17)%obj, outvar, status)
+        model%modelvar%bfncc(1) = outvar
+        call get_real(arr_state%values(18)%obj, outvar, status)
+        model%modelvar%tci_giuh(1) = outvar
+        call get_real(arr_state%values(19)%obj, outvar, status)
+        model%modelvar%nwm_ponded_depth(1) = outvar
+        call get_real(arr_state%values(20)%obj, outvar, status)
+        model%modelvar%uzsmc(1) = outvar
+        call get_real(arr_state%values(21)%obj, outvar, status)
+        model%modelvar%uzsmc_ch(1) = outvar
+        call get_real(arr_state%values(22)%obj, outvar, status)
+        model%modelvar%precip(1) = outvar
+        call get_real(arr_state%values(23)%obj, outvar, status)
+        model%modelvar%hru_area(1) = outvar
+        call get_real(arr_state%values(24)%obj, outvar, status)
+        model%modelvar%totsmc(1) = outvar
+        call get_real(arr_state%values(25)%obj, outvar, status)
+        model%modelvar%totsmc_ch(1) = outvar
         
-        call get_arr_ref(arr_state%values(7)%obj,arr_all_hrus,status)
+        call get_arr_ref(arr_state%values(26)%obj,arr_all_hrus,status)
         if(status) then
           !The number of elements in the serialized HRU data array is expected to match the 
           !number of HRUs. Check here and report failure if they are not equal.
