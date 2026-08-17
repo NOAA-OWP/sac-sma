@@ -368,15 +368,36 @@ contains
         mp_hru_arr%values(nh)%obj = mp_sub_arr
     end do
 
-    !Add the time information and the state variables by HRU to the main mp array.
-    mp_state_arr = mp_arr_type(7)
+    !Add the time information
+    mp_state_arr = mp_arr_type(26)
     mp_state_arr%values(1)%obj = mp_int_type(model%runinfo%curr_yr) !curr_yr
     mp_state_arr%values(2)%obj = mp_int_type(model%runinfo%curr_mo) !curr_mo
     mp_state_arr%values(3)%obj = mp_int_type(model%runinfo%curr_dy) !curr_dy
     mp_state_arr%values(4)%obj = mp_int_type(model%runinfo%curr_hr) !curr_hr
     mp_state_arr%values(5)%obj = mp_int_type(model%runinfo%itime) !itime
     mp_state_arr%values(6)%obj = mp_float_type(model%runinfo%time_dbl) !time_dbl
-    mp_state_arr%values(7)%obj = mp_hru_arr !state variables by hru
+    !Add values that are exposed BMI outputs to ensure loaded state can be used
+    mp_state_arr%values(7)%obj = mp_float_type(model%modelvar%qs(1)) !qs
+    mp_state_arr%values(8)%obj = mp_float_type(model%modelvar%qg(1)) !qg
+    mp_state_arr%values(9)%obj = mp_float_type(model%modelvar%tci(1)) !tci
+    mp_state_arr%values(10)%obj = mp_float_type(model%modelvar%eta(1)) !eta
+    mp_state_arr%values(11)%obj = mp_float_type(model%modelvar%roimp(1)) !roimp
+    mp_state_arr%values(12)%obj = mp_float_type(model%modelvar%sdro(1)) !sdro
+    mp_state_arr%values(13)%obj = mp_float_type(model%modelvar%ssur(1)) !ssur
+    mp_state_arr%values(14)%obj = mp_float_type(model%modelvar%sif(1)) !sif
+    mp_state_arr%values(15)%obj = mp_float_type(model%modelvar%bfs(1)) !bfs
+    mp_state_arr%values(16)%obj = mp_float_type(model%modelvar%bfp(1)) !bfp
+    mp_state_arr%values(17)%obj = mp_float_type(model%modelvar%bfncc(1)) !bfncc
+    mp_state_arr%values(18)%obj = mp_float_type(model%modelvar%tci_giuh(1)) !tci_giuh
+    mp_state_arr%values(19)%obj = mp_float_type(model%modelvar%nwm_ponded_depth(1)) !nwm_ponded_depth
+    mp_state_arr%values(20)%obj = mp_float_type(model%modelvar%uzsmc(1)) !uzsmc
+    mp_state_arr%values(21)%obj = mp_float_type(model%modelvar%uzsmc_ch(1)) !uzsmc_ch
+    mp_state_arr%values(22)%obj = mp_float_type(model%modelvar%precip(1)) !precip
+    mp_state_arr%values(23)%obj = mp_float_type(model%modelvar%hru_area(1)) !qg_m3_per_s (derived)
+    mp_state_arr%values(24)%obj = mp_float_type(model%modelvar%totsmc(1)) !totsmc
+    mp_state_arr%values(25)%obj = mp_float_type(model%modelvar%totsmc_ch(1)) !totsmc_ch
+    !Add the state variables by HRU to the main mp array.
+    mp_state_arr%values(26)%obj = mp_hru_arr !state variables by hru
             
 
     ! pack the data
