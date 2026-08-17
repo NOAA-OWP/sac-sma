@@ -392,8 +392,8 @@ contains
     mp_state_arr%values(19)%obj = mp_float_type(model%modelvar%nwm_ponded_depth(1)) !nwm_ponded_depth
     mp_state_arr%values(20)%obj = mp_float_type(model%modelvar%uzsmc(1)) !uzsmc
     mp_state_arr%values(21)%obj = mp_float_type(model%modelvar%uzsmc_ch(1)) !uzsmc_ch
-    mp_state_arr%values(22)%obj = mp_float_type(model%modelvar%precip(1)) !precip
-    mp_state_arr%values(23)%obj = mp_float_type(model%modelvar%hru_area(1)) !qg_m3_per_s (derived)
+    mp_state_arr%values(22)%obj = mp_float_type(model%forcing%precip(1)) !precip
+    mp_state_arr%values(23)%obj = mp_float_type(model%parameters%hru_area(1)) !qg_m3_per_s (derived)
     mp_state_arr%values(24)%obj = mp_float_type(model%modelvar%totsmc(1)) !totsmc
     mp_state_arr%values(25)%obj = mp_float_type(model%modelvar%totsmc_ch(1)) !totsmc_ch
     !Add the state variables by HRU to the main mp array.
@@ -462,43 +462,43 @@ contains
         model%runinfo%time_dbl = itime_dbl
         !Update output variables
         call get_real(arr_state%values(7)%obj, outvar, status)
-        model%modelvar%qs(1) = outvar
+        model%modelvar%qs(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(8)%obj, outvar, status)
-        model%modelvar%qg(1) = outvar
+        model%modelvar%qg(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(9)%obj, outvar, status)
-        model%modelvar%tci(1) = outvar
+        model%modelvar%tci(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(10)%obj, outvar, status)
-        model%modelvar%eta(1) = outvar
+        model%modelvar%eta(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(11)%obj, outvar, status)
-        model%modelvar%roimp(1) = outvar
+        model%modelvar%roimp(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(12)%obj, outvar, status)
-        model%modelvar%sdro(1) = outvar
+        model%modelvar%sdro(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(13)%obj, outvar, status)
-        model%modelvar%ssur(1) = outvar
+        model%modelvar%ssur(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(14)%obj, outvar, status)
-        model%modelvar%sif(1) = outvar
+        model%modelvar%sif(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(15)%obj, outvar, status)
-        model%modelvar%bfs(1) = outvar
+        model%modelvar%bfs(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(16)%obj, outvar, status)
-        model%modelvar%bfp(1) = outvar
+        model%modelvar%bfp(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(17)%obj, outvar, status)
-        model%modelvar%bfncc(1) = outvar
+        model%modelvar%bfncc(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(18)%obj, outvar, status)
-        model%modelvar%tci_giuh(1) = outvar
+        model%modelvar%tci_giuh(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(19)%obj, outvar, status)
-        model%modelvar%nwm_ponded_depth(1) = outvar
+        model%modelvar%nwm_ponded_depth(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(20)%obj, outvar, status)
-        model%modelvar%uzsmc(1) = outvar
+        model%modelvar%uzsmc(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(21)%obj, outvar, status)
-        model%modelvar%uzsmc_ch(1) = outvar
+        model%modelvar%uzsmc_ch(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(22)%obj, outvar, status)
-        model%modelvar%precip(1) = outvar
+        model%forcing%precip(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(23)%obj, outvar, status)
-        model%modelvar%hru_area(1) = outvar
+        model%parameters%hru_area(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(24)%obj, outvar, status)
-        model%modelvar%totsmc(1) = outvar
+        model%modelvar%totsmc(1) = real(outvar, kind=real32)
         call get_real(arr_state%values(25)%obj, outvar, status)
-        model%modelvar%totsmc_ch(1) = outvar
+        model%modelvar%totsmc_ch(1) = real(outvar, kind=real32)
         
         call get_arr_ref(arr_state%values(26)%obj,arr_all_hrus,status)
         if(status) then
