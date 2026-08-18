@@ -9,6 +9,7 @@ module bmi_sac_module
 #endif
 
   use runModule 
+  use sac_log_module
   use, intrinsic :: iso_c_binding, only: c_ptr, c_loc, c_f_pointer
   implicit none
 
@@ -180,11 +181,10 @@ contains
 
     if (len(config_file) > 0) then
        call initialize_from_file(this%model, config_file)
-
     !else
        !call initialize_from_defaults(this%model)
      end if
-
+    call write_log("Initialization Done!", LOG_LEVEL_INFO)
     bmi_status = BMI_SUCCESS
   end function sac_initialize
 
@@ -309,14 +309,15 @@ contains
          'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
        grid = 0
        bmi_status = BMI_SUCCESS
-    case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! calibratable parameters
-         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &
-         'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv')
+    case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
+         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &                
+         'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv', 'hru_id') 
        grid = 0
-       bmi_status = BMI_SUCCESS
+       bmi_status = BMI_SUCCESS 
     case default
        grid = -1
        bmi_status = BMI_FAILURE
+       call write_log("Grid for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_var_grid
 
@@ -338,6 +339,7 @@ contains
     case default
        type = "-"
        bmi_status = BMI_FAILURE
+       call write_log("Type for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_type
 
@@ -359,6 +361,7 @@ contains
     case default
        rank = -1
        bmi_status = BMI_FAILURE
+       call write_log("Rank for grid " //  itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_rank
 
@@ -378,6 +381,7 @@ contains
     case default
        shape(:) = -1
        bmi_status = BMI_FAILURE
+       call write_log("Shape for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_shape
 
@@ -399,6 +403,7 @@ contains
     case default
        size = -1
        bmi_status = BMI_FAILURE
+       call write_log("Size for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_size
 
@@ -437,6 +442,7 @@ contains
     case default
        origin(:) = -1.d0
        bmi_status = BMI_FAILURE
+       call write_log("Origin for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_origin
 
@@ -454,6 +460,7 @@ contains
     case default
        x(:) = -1.d0
        bmi_status = BMI_FAILURE
+       call write_log("x value for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_x
 
@@ -471,6 +478,7 @@ contains
     case default
        y(:) = -1.d0
        bmi_status = BMI_FAILURE
+       call write_log("y value for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_y
 
@@ -488,6 +496,7 @@ contains
     case default
        z(:) = -1.d0
        bmi_status = BMI_FAILURE
+       call write_log("z value for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_z
 
@@ -504,6 +513,7 @@ contains
     case default
        count = -1
        bmi_status = BMI_FAILURE
+       call write_log("Node count for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_grid_node_count
 
@@ -516,6 +526,7 @@ contains
 
     count = -1
     bmi_status = BMI_FAILURE
+    call write_log("Edge count for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_edge_count
 
   ! Get the number of faces in an unstructured grid.
@@ -538,6 +549,7 @@ contains
 
     edge_nodes(:) = -1
     bmi_status = BMI_FAILURE
+    call write_log("Edge nodes for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_edge_nodes
 
   ! Get the face-edge connectivity.
@@ -549,6 +561,7 @@ contains
 
     face_edges(:) = -1
     bmi_status = BMI_FAILURE
+    call write_log("Face edges for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_face_edges
 
   ! Get the face-node connectivity.
@@ -560,6 +573,7 @@ contains
 
     face_nodes(:) = -1
     bmi_status = BMI_FAILURE
+    call write_log("Face nodes for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_face_nodes
 
   ! Get the number of nodes for each face.
@@ -571,6 +585,7 @@ contains
 
     nodes_per_face(:) = -1
     bmi_status = BMI_FAILURE
+    call write_log("Nodes per face for grid " // itoa(grid) // " not found!", LOG_LEVEL_WARNING)
   end function sac_grid_nodes_per_face
 
   ! The data type of the variable, as a string.
@@ -579,6 +594,10 @@ contains
     character (len=*), intent(in) :: name
     character (len=*), intent(out) :: type
     integer :: bmi_status
+    character(len=BMI_MAX_TYPE_NAME) :: ser_create = "uint64" !pads spaces upto 2048.
+    character(len=BMI_MAX_TYPE_NAME) :: ser_size = "uint64" !pads spaces upto 2048
+    character(len=BMI_MAX_TYPE_NAME) :: ser_state = "character" !pads spaces upto 2048
+    character(len=BMI_MAX_TYPE_NAME) :: ser_free = "int" !pads spaces upto 2048
 
     select case(name)
     case('tair', 'precip', 'pet',  &                ! input vars
@@ -591,9 +610,30 @@ contains
          'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv')
        type = "double"
        bmi_status = BMI_SUCCESS
+    case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
+         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &                
+         'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv')
+       type = "real"
+       bmi_status = BMI_SUCCESS
+    case('hru_id')
+       type = "character"
+       bmi_status = BMI_SUCCESS
+    case ('serialization_create')
+       type = ser_create
+       bmi_status = BMI_SUCCESS
+    case ('serialization_size')
+       type = ser_size
+       bmi_status = BMI_SUCCESS
+    case ('serialization_state')
+       type = ser_state
+       bmi_status = BMI_SUCCESS
+    case ('serialization_free')
+       type = ser_free
+       bmi_status = BMI_SUCCESS
     case default
        type = "-"
        bmi_status = BMI_FAILURE
+       call write_log("Type for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_var_type
 
@@ -665,7 +705,6 @@ contains
     case("bfncc")
        units = "mm"
        bmi_status = BMI_SUCCESS
-    ! calibratable parameters
     case("uztwm")
        units = "mm"
        bmi_status = BMI_SUCCESS
@@ -710,13 +749,14 @@ contains
        bmi_status = BMI_SUCCESS
     case("side")
        units = "mm"
-       bmi_status = BMI_SUCCESS
+       bmi_status = BMI_SUCCESS 
     case("rserv")
        units = "mm"
-       bmi_status = BMI_SUCCESS
+       bmi_status = BMI_SUCCESS 
     case default
        units = "-"
        bmi_status = BMI_FAILURE
+       call write_log("Unit for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_var_units
 
@@ -772,7 +812,6 @@ contains
     case("bfncc")
        size = sizeof(this%model%modelvar%bfncc(1))
        bmi_status = BMI_SUCCESS
-    ! calibratable parameters
     case("uztwm")
        size = sizeof(this%model%parameters%uztwm(1))
        bmi_status = BMI_SUCCESS
@@ -821,12 +860,16 @@ contains
     case("rserv")
        size = sizeof(this%model%parameters%rserv(1))
        bmi_status = BMI_SUCCESS
+    case("hru_id")
+       size = sizeof(this%model%parameters%hru_id(1))
+       bmi_status = BMI_SUCCESS
     case("hru_area")
        size = sizeof(this%model%parameters%hru_area(1))
        bmi_status = BMI_SUCCESS
     case default
        size = -1
        bmi_status = BMI_FAILURE
+       call write_log("Item size for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_var_itemsize
 
@@ -837,17 +880,34 @@ contains
     integer, intent(out) :: nbytes
     integer :: bmi_status
     integer :: s1, s2, s3, grid, grid_size, item_size
-
-    s1 = this%get_var_grid(name, grid)
-    s2 = this%get_grid_size(grid, grid_size)
-    s3 = this%get_var_itemsize(name, item_size)
-
-    if ((s1 == BMI_SUCCESS).and.(s2 == BMI_SUCCESS).and.(s3 == BMI_SUCCESS)) then
-       nbytes = item_size * grid_size
-       bmi_status = BMI_SUCCESS
+    
+    if (name == "serialization_create" .or. name == "serialization_size") then
+      nbytes = storage_size(0_int64)/8 !returns size in bits. So, divide by 8 for bytes.
+      bmi_status = BMI_SUCCESS
+    else if (name == "serialization_state") then
+      if(.not.allocated(this%model%serialization_buffer) .or. size(this%model%serialization_buffer) == 0) then
+         nbytes = -1
+         call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
+         bmi_status = BMI_FAILURE
+      else
+         nbytes = size(this%model%serialization_buffer,KIND=int64)
+         bmi_status = BMI_SUCCESS
+      end if
+    else if (name == "serialization_free") then 
+      nbytes = storage_size(0_int32)/8 !returns size in bits. So, divide by 8 for bytes.
+      bmi_status = BMI_SUCCESS
     else
-       nbytes = -1
-       bmi_status = BMI_FAILURE
+      s1 = this%get_var_grid(name, grid)
+      s2 = this%get_grid_size(grid, grid_size)
+      s3 = this%get_var_itemsize(name, item_size)
+      if ((s1 == BMI_SUCCESS).and.(s2 == BMI_SUCCESS).and.(s3 == BMI_SUCCESS)) then
+         nbytes = item_size * grid_size
+         bmi_status = BMI_SUCCESS
+      else
+         nbytes = -1
+         bmi_status = BMI_FAILURE
+         call write_log("nbytes for variable " // name // " not found!", LOG_LEVEL_WARNING)
+      end if
     end if
   end function sac_var_nbytes
 
@@ -870,17 +930,26 @@ contains
     class (bmi_sac), intent(in) :: this
     character (len=*), intent(in) :: name
     integer, intent(inout) :: dest(:)
-    integer :: bmi_status
-
+    integer :: bmi_status, exec_status
     select case(name)
-!==================== UPDATE IMPLEMENTATION IF NECESSARY FOR INTEGER VARS =================
 !     case("model__identification_number")
 !        dest = [this%model%id]
 !        bmi_status = BMI_SUCCESS
-    case default
-       dest(:) = -1
-       bmi_status = BMI_FAILURE
-    end select
+
+      case("serialization_size")
+         if(.not.allocated(this%model%serialization_buffer) .or. size(this%model%serialization_buffer) == 0) then
+            call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
+            bmi_status = BMI_FAILURE
+         else
+            dest = size(this%model%serialization_buffer, KIND=int64)
+            bmi_status = BMI_SUCCESS
+         end if
+
+      case default
+         dest(:) = -1
+         bmi_status = BMI_FAILURE
+         call write_log("Integer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
+      end select
   end function sac_get_int
 
   ! Get a copy of a real variable's values, flattened.
@@ -953,9 +1022,80 @@ contains
     case("bfncc")
        dest(1) = this%model%modelvar%bfncc(1)
        bmi_status = BMI_SUCCESS
+    case("uztwm")
+       dest(1) = this%model%parameters%uztwm(1)
+       bmi_status = BMI_SUCCESS
+    case("uzfwm")
+       dest(1) = this%model%parameters%uzfwm(1)
+       bmi_status = BMI_SUCCESS
+    case("lztwm")
+       dest(1) = this%model%parameters%lztwm(1)
+       bmi_status = BMI_SUCCESS
+    case("lzfsm")
+       dest(1) = this%model%parameters%lzfsm(1)
+       bmi_status = BMI_SUCCESS
+    case("lzfpm")
+       dest(1) = this%model%parameters%lzfpm(1)
+       bmi_status = BMI_SUCCESS
+    case("adimp")
+       dest(1) = this%model%parameters%adimp(1)
+       bmi_status = BMI_SUCCESS
+    case("uzk")
+       dest(1) = this%model%parameters%uzk(1)
+       bmi_status = BMI_SUCCESS
+    case("lzpk")
+       dest(1) = this%model%parameters%lzpk(1)
+       bmi_status = BMI_SUCCESS
+    case("lzsk")
+       dest(1) = this%model%parameters%lzsk(1)
+       bmi_status = BMI_SUCCESS
+    case("zperc")
+       dest(1) = this%model%parameters%zperc(1)
+       bmi_status = BMI_SUCCESS
+    case("rexp")
+       dest(1) = this%model%parameters%rexp(1)
+       bmi_status = BMI_SUCCESS
+    case("pctim")
+       dest(1) = this%model%parameters%pctim(1)
+       bmi_status = BMI_SUCCESS
+    case("pfree")
+       dest(1) = this%model%parameters%pfree(1)
+       bmi_status = BMI_SUCCESS
+    case("riva")
+       dest(1) = this%model%parameters%riva(1)
+       bmi_status = BMI_SUCCESS
+    case("side")
+       dest(1) = this%model%parameters%side(1)
+       bmi_status = BMI_SUCCESS
+    case("rserv")
+       dest(1) = this%model%parameters%rserv(1)
+       bmi_status = BMI_SUCCESS
+    case("hru_area")
+       dest(1) = this%model%parameters%hru_area(1)
+
+    case default
+       dest(:) = -1.0
+       bmi_status = BMI_FAILURE
+       call write_log("Float value for variable " // name // " not found!", LOG_LEVEL_WARNING)
+    end select
+    ! NOTE, if vars are gridded, then use:
+    ! dest = reshape(this%model%temperature, [this%model%n_x*this%model%n_y]) 
+  end function sac_get_float
+
+  ! Get a copy of a double variable's values, flattened.
+  function sac_get_double(this, name, dest) result (bmi_status)
+    class (bmi_sac), intent(in) :: this
+    character (len=*), intent(in) :: name
+    double precision, intent(inout) :: dest(:)
+    integer :: bmi_status
+
+    !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR DOUBLE VARS =================
+
+    select case(name)
     case default
        dest(:) = -1.d0
        bmi_status = BMI_FAILURE
+       call write_log("Double value for variable " // name // " not found!", LOG_LEVEL_WARNING)
     end select
   end function sac_get_double
 
@@ -973,8 +1113,12 @@ contains
  !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR INTEGER VARS =================
 
      select case(name)
-     case default
+      case("serialization_state")
+        dest_ptr = this%model%serialization_buffer
+        bmi_status = BMI_SUCCESS
+      case default
         bmi_status = BMI_FAILURE
+        call write_log("Integer pointer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_ptr_int
 
@@ -990,6 +1134,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
+        call write_log("Float pointer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_ptr_float
 
@@ -1007,6 +1152,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
+        call write_log("Double pointer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_ptr_double
 
@@ -1025,6 +1171,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
+        call write_log(" Variable " // name // " not found in input integer array!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_at_indices_int
 
@@ -1043,6 +1190,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
+        call write_log(" Variable " // name // " not found in input float array!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_at_indices_float
 
@@ -1061,6 +1209,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
+        call write_log(" Variable " // name // " not found in input double array!", LOG_LEVEL_WARNING)
      end select
    end function sac_get_at_indices_double
 
@@ -1070,6 +1219,7 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(in) :: src(:)
     integer :: bmi_status
+    integer(kind=int64) :: exec_status
 
     !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR INTEGER VARS =================
 
@@ -1077,8 +1227,32 @@ contains
 !     case("model__identification_number")
 !        this%model%id = src(1)
 !        bmi_status = BMI_SUCCESS
-    case default
-       bmi_status = BMI_FAILURE
+      case("serialization_create")
+         call new_serialization_request(this%model, exec_status)
+         if (exec_status == 0) then
+            bmi_status = BMI_SUCCESS
+            call write_log("Serialization for state saving complete", LOG_LEVEL_DEBUG)
+         else
+            bmi_status = BMI_FAILURE
+            call write_log(" Failed to create serialized data for state saving", LOG_LEVEL_FATAL)
+         end if
+      case("serialization_state")
+         call deserialize_mp_buffer(this%model, src, exec_status)
+         if (exec_status == 0) then
+            bmi_status = BMI_SUCCESS
+            call write_log("Deserialization for state saving complete", LOG_LEVEL_DEBUG)
+         else
+            bmi_status = BMI_FAILURE
+            call write_log("Failed to restore serialized data for state saving", LOG_LEVEL_FATAL)
+         end if
+      case("serialization_free")
+         if(allocated(this%model%serialization_buffer)) then
+            deallocate(this%model%serialization_buffer)
+         end if
+         bmi_status = BMI_SUCCESS
+      case default
+         bmi_status = BMI_FAILURE
+         call write_log(" Failed to set integer value for  " // name // "", LOG_LEVEL_WARNING)
     end select
   end function sac_set_int
 
@@ -1151,7 +1325,6 @@ contains
     case("bfncc")
        this%model%modelvar%bfncc(1) = src(1)
        bmi_status = BMI_SUCCESS
-    ! calibratable parameters
     case("uztwm")
        this%model%parameters%uztwm(1) = src(1)
        bmi_status = BMI_SUCCESS
@@ -1205,6 +1378,24 @@ contains
        bmi_status = BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE
+       call write_log(" Failed to set float value for  " // name // "", LOG_LEVEL_WARNING)
+    end select
+    ! NOTE, if vars are gridded, then use:
+    ! this%model%temperature = reshape(src, [this%model%n_y, this%model%n_x])
+  end function sac_set_float
+
+  ! Set new double values.
+  function sac_set_double(this, name, src) result (bmi_status)
+    class (bmi_sac), intent(inout) :: this
+    character (len=*), intent(in) :: name
+    double precision, intent(in) :: src(:)
+    integer :: bmi_status
+
+    !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR DOUBLE VARS =================
+
+    select case(name)
+    case default
+       bmi_status = BMI_FAILURE
     end select
   end function sac_set_double
 
@@ -1223,6 +1414,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
+        call write_log(" Failed to set integer value at indices for  " // name // "", LOG_LEVEL_WARNING)
      end select
    end function sac_set_at_indices_int
 
@@ -1241,6 +1433,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
+        call write_log(" Failed to set float value at indices for  " // name // "", LOG_LEVEL_WARNING)
      end select
    end function sac_set_at_indices_float
 
@@ -1259,6 +1452,7 @@ contains
      select case(name)
      case default
         bmi_status = BMI_FAILURE
+        call write_log(" Failed to set double value at indices for  " // name // "", LOG_LEVEL_WARNING)
      end select
    end function sac_set_at_indices_double
 
@@ -1304,6 +1498,7 @@ contains
 
    if( .not. associated( bmi_box ) .or. .not. associated( bmi_box%ptr ) ) then
     bmi_status = BMI_FAILURE
+    call write_log(" Failed to register BMI", LOG_LEVEL_WARNING)
    else
     !Return the pointer to box
     this = c_loc(bmi_box)

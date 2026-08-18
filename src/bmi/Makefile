@@ -7,7 +7,7 @@ include ../user_build_options
 
 F90FLAGS := -cpp ${F90FLAGS}
 
-OBJS = bmi_noahowp.o \
+OBJS = bmi_sac.o \
        bmi.o
 
 all:	$(OBJS)
@@ -26,6 +26,6 @@ clean:
 # Dependencies:
 #
 
-bmi_noahowp.o: bmi.o \
+bmi_sac.o: bmi.o \
               ../src/RunModule.o
 
