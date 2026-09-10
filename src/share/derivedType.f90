@@ -7,18 +7,18 @@ module derivedType
 
   type, public :: derived_type
     !areally-average variables for output
-    DOUBLE PRECISION                                  :: qs_comb, qg_comb, tci_comb, eta_comb 
-    DOUBLE PRECISION                                  :: roimp_comb, sdro_comb, ssur_comb    
-    DOUBLE PRECISION                                  :: sif_comb, bfs_comb, bfp_comb        
-    DOUBLE PRECISION                                  :: precip_comb, tair_comb, pet_comb
-    DOUBLE PRECISION                                  :: bfncc_comb    
+    real                               :: qs_comb, qg_comb, tci_comb, eta_comb 
+    real                               :: roimp_comb, sdro_comb, ssur_comb    
+    real                               :: sif_comb, bfs_comb, bfp_comb        
+    real                               :: precip_comb, tair_comb, pet_comb
+    real                               :: bfncc_comb, tci_giuh_comb, nwm_ponded_depth_comb
     !variables for the mass balance check
-    DOUBLE PRECISION, dimension(:), allocatable    :: precip_sum, eta_sum,tci_sum 
-    DOUBLE PRECISION, dimension(:), allocatable    :: delta_uztwc_sum, delta_uzfwc_sum     
-    DOUBLE PRECISION, dimension(:), allocatable    :: delta_lztwc_sum, delta_lzfsc_sum     
-    DOUBLE PRECISION, dimension(:), allocatable    :: delta_lzfpc_sum, delta_adimc_sum     
-    DOUBLE PRECISION, dimension(:), allocatable    :: delta_storage_sum, mass_balance       
-    DOUBLE PRECISION, dimension(:), allocatable    :: bfncc_sum
+    real, dimension(:), allocatable    :: precip_sum, eta_sum,tci_sum 
+    real, dimension(:), allocatable    :: delta_uztwc_sum, delta_uzfwc_sum     
+    real, dimension(:), allocatable    :: delta_lztwc_sum, delta_lzfsc_sum     
+    real, dimension(:), allocatable    :: delta_lzfpc_sum, delta_adimc_sum     
+    real, dimension(:), allocatable    :: delta_storage_sum, mass_balance       
+    real, dimension(:), allocatable    :: bfncc_sum
     contains
 
       procedure, public  :: initDerived
@@ -64,6 +64,8 @@ module derivedType
     this%tair_comb     = 0.0
     this%pet_comb      = 0.0
     this%bfncc_comb    = 0.0
+    this%tci_giuh_comb = 0.0
+    this%nwm_ponded_depth_comb = 0.0
     this%precip_sum    = 0.0
     this%eta_sum       = 0.0
     this%tci_sum       = 0.0

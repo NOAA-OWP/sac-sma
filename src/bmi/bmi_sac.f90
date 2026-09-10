@@ -99,7 +99,7 @@ module bmi_sac_module
 
   ! Exchange items
   integer, parameter :: input_item_count = 3
-  integer, parameter :: output_item_count = 11
+  integer, parameter :: output_item_count = 19
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -168,6 +168,14 @@ contains
     output_items(9) = 'bfs'     ! channel baseflow component (mm)
     output_items(10) = 'bfp'    ! channel baseflow component (mm)
     output_items(11) = 'bfncc'  ! non-channel baseflow component (mm)
+    output_items(12) = 'tci_giuh'  ! total channel inflow from upstream using GIUH (m)
+    output_items(13) = 'nwm_ponded_depth'  ! NWM ponded depth (m)
+    output_items(14) = 'uzsmc'  ! upper zone total storage content (m)
+    output_items(15) = 'uzsmc_ch'  ! upper zone storage content change (m)
+    output_items(16) = 'precip_out'  ! rain+melt liquid input (mm/s)
+    output_items(17) = 'qg_m3_per_s'
+    output_items(18) = "totsmc"
+    output_items(19) = "totsmc_ch"
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -256,7 +264,6 @@ contains
   function sac_update(this) result (bmi_status)
     class (bmi_sac), intent(inout) :: this
     integer :: bmi_status
-
     call advance_in_time(this%model)
     bmi_status = BMI_SUCCESS
   end function sac_update
@@ -305,15 +312,15 @@ contains
 
     select case(name)
     case('tair', 'precip', 'pet', &                  ! input vars
-         'qs', 'qg', 'tci', 'eta',  &                ! output vars
-         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
+         'qs', 'qg', 'tci', 'eta', 'tci_giuh', 'uzsmc', 'uzsmc_ch', 'totsmc', 'totsmc_ch', &                ! output vars
+         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'nwm_ponded_depth', 'precip_out', 'qg_m3_per_s')
        grid = 0
        bmi_status = BMI_SUCCESS
     case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
-         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &                
-         'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv', 'hru_id') 
+         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &
+         'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv', 'hru_id')
        grid = 0
-       bmi_status = BMI_SUCCESS 
+       bmi_status = BMI_SUCCESS
     case default
        grid = -1
        bmi_status = BMI_FAILURE
@@ -594,24 +601,19 @@ contains
     character (len=*), intent(in) :: name
     character (len=*), intent(out) :: type
     integer :: bmi_status
-    character(len=BMI_MAX_TYPE_NAME) :: ser_create = "uint64" !pads spaces upto 2048.
-    character(len=BMI_MAX_TYPE_NAME) :: ser_size = "uint64" !pads spaces upto 2048
-    character(len=BMI_MAX_TYPE_NAME) :: ser_state = "character" !pads spaces upto 2048
+    character(len=BMI_MAX_TYPE_NAME) :: ser_create = "int" !pads spaces upto 2048.
+    character(len=BMI_MAX_TYPE_NAME) :: ser_size = "int" !pads spaces upto 2048
+    character(len=BMI_MAX_TYPE_NAME) :: ser_state = "int" !pads spaces upto 2048
     character(len=BMI_MAX_TYPE_NAME) :: ser_free = "int" !pads spaces upto 2048
 
     select case(name)
     case('tair', 'precip', 'pet',  &                ! input vars
-         'qs', 'qg', 'tci', 'eta', &                ! output vars
-         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc')
-       type = "double"
-       bmi_status = BMI_SUCCESS
-    case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! calibratable parameters
-         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &
-         'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv')
-       type = "double"
+         'qs', 'qg', 'tci', 'eta', 'tci_giuh', 'nwm_ponded_depth', 'uzsmc', 'uzsmc_ch', 'totsmc', 'totsmc_ch', &                ! output vars
+         'roimp','sdro','ssur','sif','bfs','bfp', 'bfncc', 'precip_out', 'qg_m3_per_s')
+       type = "real"
        bmi_status = BMI_SUCCESS
     case('uztwm', 'uzfwm', 'lztwm', 'lzfsm',  'hru_area', &     ! parameters
-         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &                
+         'lzfpm', 'adimp', 'uzk', 'lzpk', 'lzsk', 'zperc',  &
          'rexp', 'pctim', 'pfree', 'riva', 'side', 'rserv')
        type = "real"
        bmi_status = BMI_SUCCESS
@@ -630,6 +632,9 @@ contains
     case ('serialization_free')
        type = ser_free
        bmi_status = BMI_SUCCESS
+    case("reset_time")
+       type = "double"
+       bmi_status = BMI_SUCCESS
     case default
        type = "-"
        bmi_status = BMI_FAILURE
@@ -645,7 +650,7 @@ contains
     integer :: bmi_status
 
     select case(name)
-    case("precip")
+    case("precip", "precip_out")
        units = "mm/s"
        bmi_status = BMI_SUCCESS
     case("tair")
@@ -660,7 +665,16 @@ contains
     case("qg")
        units = "mm"
        bmi_status = BMI_SUCCESS
+    case("qg_m3_per_s")
+       units = "m3 s-1"
+       bmi_status = BMI_SUCCESS
     case("tci")
+       units = "m"
+       bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       units = "m"
+       bmi_status = BMI_SUCCESS
+    case("nwm_ponded_depth")
        units = "m"
        bmi_status = BMI_SUCCESS
     case("eta")
@@ -749,10 +763,22 @@ contains
        bmi_status = BMI_SUCCESS
     case("side")
        units = "mm"
-       bmi_status = BMI_SUCCESS 
+       bmi_status = BMI_SUCCESS
     case("rserv")
        units = "mm"
-       bmi_status = BMI_SUCCESS 
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       units = "m"
+       bmi_status = BMI_SUCCESS
+    case("uzsmc_ch")
+       units = "m"
+       bmi_status = BMI_SUCCESS
+    case("totsmc", "totsmc_ch")
+       units = "m"
+       bmi_status = BMI_SUCCESS
+    case("hru_area")
+       units = "km2"
+       bmi_status = BMI_SUCCESS
     case default
        units = "-"
        bmi_status = BMI_FAILURE
@@ -766,9 +792,10 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(out) :: size
     integer :: bmi_status
+    double precision :: d
 
     select case(name)
-    case("precip")
+    case("precip", "precip_out")
        size = sizeof(this%model%forcing%precip(1))
 !       size = sizeof(this%model%derived%precip_comb)    ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
@@ -782,11 +809,17 @@ contains
        size = sizeof(this%model%modelvar%qs(1))
 !       size = sizeof(this%model%derived%qs_comb)        ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
-    case("qg")
+    case("qg", "qg_m3_per_s")
        size = sizeof(this%model%modelvar%qg(1))        ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
     case("tci")
        size = sizeof(this%model%modelvar%tci(1))      ! 'sizeof' in gcc & ifort
+       bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       size = sizeof(this%model%modelvar%tci_giuh(1))      ! 'sizeof' in gcc & ifort
+       bmi_status = BMI_SUCCESS
+    case("nwm_ponded_depth")
+       size = sizeof(this%model%modelvar%nwm_ponded_depth(1))      ! 'sizeof' in gcc & ifort
        bmi_status = BMI_SUCCESS
     case("eta")
        size = sizeof(this%model%modelvar%eta(1))
@@ -811,6 +844,18 @@ contains
        bmi_status = BMI_SUCCESS
     case("bfncc")
        size = sizeof(this%model%modelvar%bfncc(1))
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       size = sizeof(this%model%modelvar%uzsmc(1))
+       bmi_status = BMI_SUCCESS
+    case("uzsmc_ch")
+       size = sizeof(this%model%modelvar%uzsmc_ch(1))
+       bmi_status = BMI_SUCCESS
+    case("totsmc")
+       size = sizeof(this%model%modelvar%totsmc(1))
+       bmi_status = BMI_SUCCESS
+    case("totsmc_ch")
+       size = sizeof(this%model%modelvar%totsmc_ch(1))
        bmi_status = BMI_SUCCESS
     case("uztwm")
        size = sizeof(this%model%parameters%uztwm(1))
@@ -866,6 +911,12 @@ contains
     case("hru_area")
        size = sizeof(this%model%parameters%hru_area(1))
        bmi_status = BMI_SUCCESS
+    case("serialization_create", "serialization_size", "serialization_free", "serialization_state")
+       size = sizeof(0_int32)
+       bmi_status = BMI_SUCCESS
+    case("reset_time")
+       size = sizeof(d)
+       bmi_status = BMI_SUCCESS
     case default
        size = -1
        bmi_status = BMI_FAILURE
@@ -875,28 +926,28 @@ contains
 
   ! The size of the given variable.
   function sac_var_nbytes(this, name, nbytes) result (bmi_status)
-    class (bmi_sac), intent(in) :: this
-    character (len=*), intent(in) :: name
-    integer, intent(out) :: nbytes
-    integer :: bmi_status
-    integer :: s1, s2, s3, grid, grid_size, item_size
-    
-    if (name == "serialization_create" .or. name == "serialization_size") then
-      nbytes = storage_size(0_int64)/8 !returns size in bits. So, divide by 8 for bytes.
-      bmi_status = BMI_SUCCESS
-    else if (name == "serialization_state") then
-      if(.not.allocated(this%model%serialization_buffer) .or. size(this%model%serialization_buffer) == 0) then
-         nbytes = -1
-         call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
-         bmi_status = BMI_FAILURE
-      else
-         nbytes = size(this%model%serialization_buffer,KIND=int64)
+   class (bmi_sac), intent(in) :: this
+   character (len=*), intent(in) :: name
+   integer, intent(out) :: nbytes
+   integer :: bmi_status
+   integer :: s1, s2, s3, grid, grid_size, item_size
+   double precision :: d
+   select case(name)
+   case("serialization_create", "serialization_size", "serialization_free", "reset_time")
+      bmi_status = sac_var_itemsize(this, name, nbytes)
+   case("serialization_state")
+      if(allocated(this%model%serialization_buffer) .and. size(this%model%serialization_buffer) > 0) then
+         nbytes = sizeof(this%model%serialization_buffer)
          bmi_status = BMI_SUCCESS
+      else if (this%model%serialization_size > 0) then
+         nbytes = this%model%serialization_size
+         bmi_status = BMI_SUCCESS
+      else
+         call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
+         nbytes = 0
+         bmi_status = BMI_FAILURE
       end if
-    else if (name == "serialization_free") then 
-      nbytes = storage_size(0_int32)/8 !returns size in bits. So, divide by 8 for bytes.
-      bmi_status = BMI_SUCCESS
-    else
+   case default
       s1 = this%get_var_grid(name, grid)
       s2 = this%get_grid_size(grid, grid_size)
       s3 = this%get_var_itemsize(name, item_size)
@@ -908,7 +959,7 @@ contains
          bmi_status = BMI_FAILURE
          call write_log("nbytes for variable " // name // " not found!", LOG_LEVEL_WARNING)
       end if
-    end if
+   end select
   end function sac_var_nbytes
 
   ! The location (node, face, edge) of the given variable.
@@ -931,6 +982,8 @@ contains
     character (len=*), intent(in) :: name
     integer, intent(inout) :: dest(:)
     integer :: bmi_status, exec_status
+    character(len=20) :: dest_size
+    character(len=20) :: ser_size
     select case(name)
 !     case("model__identification_number")
 !        dest = [this%model%id]
@@ -941,10 +994,26 @@ contains
             call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
             bmi_status = BMI_FAILURE
          else
-            dest = size(this%model%serialization_buffer, KIND=int64)
+            dest(:) = sizeof(this%model%serialization_buffer)
             bmi_status = BMI_SUCCESS
          end if
-
+      case("serialization_state")
+         if(allocated(this%model%serialization_buffer) .and. size(this%model%serialization_buffer) > 0) then
+            if(size(dest) == size(this%model%serialization_buffer)) then
+               dest(:) = this%model%serialization_buffer(:)
+               bmi_status = BMI_SUCCESS
+            else
+               write(dest_size, "(I20)") size(dest)
+               write(ser_size, "(I20)") size(this%model%serialization_buffer)
+               call write_log("The destination size (" // trim(dest_size) &
+                  // ") does not match the serializations size (" // trim(ser_size) // ")", &
+                  LOG_LEVEL_SEVERE)
+               bmi_status = BMI_FAILURE
+            end if
+         else
+            call write_log("Serialization not set yet!", LOG_LEVEL_WARNING)
+            bmi_status = BMI_FAILURE
+         end if
       case default
          dest(:) = -1
          bmi_status = BMI_FAILURE
@@ -960,25 +1029,7 @@ contains
     integer :: bmi_status
 
     select case(name)
-    case default
-       dest(:) = -1.0
-       bmi_status = BMI_FAILURE
-    end select
-    ! NOTE, if vars are gridded, then use:
-    ! dest = reshape(this%model%temperature, [this%model%n_x*this%model%n_y]) 
-  end function sac_get_float
-
-  ! Get a copy of a double variable's values, flattened.
-  function sac_get_double(this, name, dest) result (bmi_status)
-    class (bmi_sac), intent(in) :: this
-    character (len=*), intent(in) :: name
-    double precision, intent(inout) :: dest(:)
-    integer :: bmi_status
-
-    !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR DOUBLE VARS =================
-
-    select case(name)
-    case("precip")
+    case("precip", "precip_out")
        dest(1) = this%model%forcing%precip(1)
 !       dest(1) = this%model%derived%precip_comb
        bmi_status = BMI_SUCCESS
@@ -995,8 +1046,38 @@ contains
     case("qg")
        dest(1) = this%model%modelvar%qg(1)
        bmi_status = BMI_SUCCESS
+   case("qg_m3_per_s")
+       ! Sac-SMA stores qg as baseflow depth in mm for the timestep.
+       ! qg(1) is the catchment/HRU-level value, so use the matching HRU area
+       ! rather than basin total_area.
+       !
+       ! Conversion:
+       !   mm * 0.001 m/mm * km2 * 1.0e6 m2/km2 / s = m3/s
+       ! which simplifies to:
+       !   mm * km2 * 1000 / s = m3/s
+       dest(1) = this%model%modelvar%qg(1) * this%model%parameters%hru_area(1) * 1000.0 / &
+                 real(this%model%runinfo%dt)
+       bmi_status = BMI_SUCCESS
     case("tci")
        dest(1) = this%model%modelvar%tci(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       dest(1) = this%model%modelvar%tci_giuh(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("nwm_ponded_depth")
+       dest(1) = this%model%modelvar%nwm_ponded_depth(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       dest(1) = this%model%modelvar%uzsmc(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("uzsmc_ch")
+       dest(1) = this%model%modelvar%uzsmc_ch(1)/1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("totsmc")
+       dest(1) = this%model%modelvar%totsmc(1) / 1000.0 !convert mm to m
+       bmi_status = BMI_SUCCESS
+    case("totsmc_ch")
+       dest(1) = this%model%modelvar%totsmc_ch(1) / 1000.0 !convert mm to m
        bmi_status = BMI_SUCCESS
     case("eta")
        dest(1) = this%model%modelvar%eta(1)
@@ -1072,7 +1153,7 @@ contains
        bmi_status = BMI_SUCCESS
     case("hru_area")
        dest(1) = this%model%parameters%hru_area(1)
-
+       bmi_status = BMI_SUCCESS
     case default
        dest(:) = -1.0
        bmi_status = BMI_FAILURE
@@ -1113,9 +1194,6 @@ contains
  !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR INTEGER VARS =================
 
      select case(name)
-      case("serialization_state")
-        dest_ptr = this%model%serialization_buffer
-        bmi_status = BMI_SUCCESS
       case default
         bmi_status = BMI_FAILURE
         call write_log("Integer pointer value for variable " // name // " not found!", LOG_LEVEL_WARNING)
@@ -1236,6 +1314,7 @@ contains
             bmi_status = BMI_FAILURE
             call write_log(" Failed to create serialized data for state saving", LOG_LEVEL_FATAL)
          end if
+         this%model%serialization_size = -1
       case("serialization_state")
          call deserialize_mp_buffer(this%model, src, exec_status)
          if (exec_status == 0) then
@@ -1245,10 +1324,15 @@ contains
             bmi_status = BMI_FAILURE
             call write_log("Failed to restore serialized data for state saving", LOG_LEVEL_FATAL)
          end if
+         this%model%serialization_size = -1
       case("serialization_free")
          if(allocated(this%model%serialization_buffer)) then
             deallocate(this%model%serialization_buffer)
          end if
+         bmi_status = BMI_SUCCESS
+         this%model%serialization_size = -1
+      case("serialization_size")
+         this%model%serialization_size = src(1)
          bmi_status = BMI_SUCCESS
       case default
          bmi_status = BMI_FAILURE
@@ -1262,23 +1346,6 @@ contains
     character (len=*), intent(in) :: name
     real, intent(in) :: src(:)
     integer :: bmi_status
-
-    select case(name)
-    case default
-       bmi_status = BMI_FAILURE
-    end select
-    ! NOTE, if vars are gridded, then use:
-    ! this%model%temperature = reshape(src, [this%model%n_y, this%model%n_x])
-  end function sac_set_float
-
-  ! Set new double values.
-  function sac_set_double(this, name, src) result (bmi_status)
-    class (bmi_sac), intent(inout) :: this
-    character (len=*), intent(in) :: name
-    double precision, intent(in) :: src(:)
-    integer :: bmi_status
-
-    !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR DOUBLE VARS =================
 
     select case(name)
     case("precip")
@@ -1300,6 +1367,18 @@ contains
        bmi_status = BMI_SUCCESS
     case("tci")
        this%model%modelvar%tci(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("tci_giuh")
+       this%model%modelvar%tci_giuh(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("nwm_ponded_depth")
+       this%model%modelvar%nwm_ponded_depth(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("uzsmc")
+       this%model%modelvar%uzsmc(1) = src(1)
+       bmi_status = BMI_SUCCESS
+    case("uzsmc_ch")
+       this%model%modelvar%uzsmc_ch(1) = src(1)
        bmi_status = BMI_SUCCESS
     case("eta")
        this%model%modelvar%eta(1) = src(1)
@@ -1390,10 +1469,20 @@ contains
     character (len=*), intent(in) :: name
     double precision, intent(in) :: src(:)
     integer :: bmi_status
+    integer(kind=int64) :: exec_status
 
     !==================== UPDATE IMPLEMENTATION IF NECESSARY FOR DOUBLE VARS =================
 
     select case(name)
+      case("reset_time")
+         call reset_model_time(this%model, exec_status)
+         if (exec_status == 0) then
+            bmi_status = BMI_SUCCESS
+            call write_log("Time variables reset successfully for state restoring", LOG_LEVEL_DEBUG)
+         else
+            bmi_status = BMI_FAILURE
+            call write_log(" Failed to reset time variables for state restoring", LOG_LEVEL_FATAL)
+         end if
     case default
        bmi_status = BMI_FAILURE
     end select
@@ -1477,7 +1566,7 @@ contains
 !     call print_info(this%model)
 !   end subroutine print_model_info
 #ifdef NGEN_ACTIVE
-  function register_bmi(this) result(bmi_status) bind(C, name="register_bmi")
+  function register_bmi(this) result(bmi_status) bind(C, name="register_bmi_sac")
    use, intrinsic:: iso_c_binding, only: c_ptr, c_loc, c_int
    use iso_c_bmif_2_0
    implicit none

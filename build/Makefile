@@ -52,7 +52,7 @@ ifeq "$(FC)" "gfortran"
   FLAGS77 = -O3 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
 endif
 
-# Check if FC contains the substring "ifort" OR "ifx" 
+# Check if FC contains the substring "ifort" OR "ifx"
 # This covers ifort, mpiifort, ifx, and mpiifx.
 INTEL_COMPILER_CHECK = $(findstring ifort,$(FC)) $(findstring ifx,$(FC))
 
@@ -79,7 +79,9 @@ endif
 sac = \
 		duamel.f \
 		ex_sac1.f \
-		sac1.f 
+		sac1.f
+
+model_sac = $(patsubst %, $(sac_dir)/%, $(sac))
 
 # --- Dependency Management for sac_data_mod ---
 SAC_DATA_MOD_SRC = $(sac_dir)/sac_data_mod.f90
@@ -92,6 +94,7 @@ run_util = \
 	nrtype.f90 \
 	sacLogger.f90 \
 	constants.f90 \
+  giuh_utilities.f90 \
 	namelistModule.f90 \
         parametersType.f90 \
         forcingType.f90 \
@@ -137,7 +140,6 @@ devel: model link
 check:
 	echo test
 	echo $(FC)
-
 
 # compile model code
 model:

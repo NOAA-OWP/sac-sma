@@ -8,24 +8,33 @@ module modelVarType
   type, public :: modelvar_type
 
     ! main model states and flux variable
-    DOUBLE PRECISION, dimension(:), allocatable    :: uztwc  ! Upper zone tension water storage content (mm) 
-    DOUBLE PRECISION, dimension(:), allocatable    :: uzfwc  ! Upper zone free water storage content (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: lztwc  ! Lower zone tension water storage content (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: lzfsc  ! Lower zone free secondary water storage content (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: lzfpc  ! Lower zone free primary water storage content (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: adimc  ! Additional impervious area content (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: qs     ! surface runoff from all sources (mm)    
-    DOUBLE PRECISION, dimension(:), allocatable    :: qg     ! baseflow (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: tci    ! total channel inflow (mm)    
-    DOUBLE PRECISION, dimension(:), allocatable    :: eta    ! actual evapotranspiration (mm) 
-    DOUBLE PRECISION, dimension(:), allocatable    :: roimp  ! impervious area runoff (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: sdro   ! direct runoff (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: ssur   ! surface runoff (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: sif    ! interflow (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: bfs    ! channel baseflow component (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: bfp    ! channel baseflow component (mm)
-    DOUBLE PRECISION, dimension(:), allocatable    :: bfncc  ! baseflow non-channelcomponent (mm)
+    real, dimension(:), allocatable    :: uztwc  ! Upper zone tension water storage content (mm) 
+    real, dimension(:), allocatable    :: uzfwc  ! Upper zone free water storage content (mm)
+    real, dimension(:), allocatable    :: lztwc  ! Lower zone tension water storage content (mm)
+    real, dimension(:), allocatable    :: lzfsc  ! Lower zone free secondary water storage content (mm)
+    real, dimension(:), allocatable    :: lzfpc  ! Lower zone free primary water storage content (mm)
+    real, dimension(:), allocatable    :: adimc  ! Additional impervious area content (mm)
+    real, dimension(:), allocatable    :: qs     ! surface runoff from all sources (mm)    
+    real, dimension(:), allocatable    :: qg     ! baseflow (mm)
+    real, dimension(:), allocatable    :: tci    ! total channel inflow (mm)    
+    real, dimension(:), allocatable    :: eta    ! actual evapotranspiration (mm) 
+    real, dimension(:), allocatable    :: roimp  ! impervious area runoff (mm)
+    real, dimension(:), allocatable    :: sdro   ! direct runoff (mm)
+    real, dimension(:), allocatable    :: ssur   ! surface runoff (mm)
+    real, dimension(:), allocatable    :: sif    ! interflow (mm)
+    real, dimension(:), allocatable    :: bfs    ! channel baseflow component (mm)
+    real, dimension(:), allocatable    :: bfp    ! channel baseflow component (mm)
+    real, dimension(:), allocatable    :: bfncc  ! baseflow non-channelcomponent (mm)
+    real, dimension(:), allocatable    :: tci_giuh ! total channel inflow with giuh (mm)
+    real(kind=8), allocatable          :: runoff_queue_mm(:, :) ! aggregated runoff with giuh (mm)
+    real, dimension(:), allocatable    :: nwm_ponded_depth ! GIUH based NWM Ponded Depth (mm)
+    real, dimension(:), allocatable    :: uzsmc  ! Upper zone soil moisture content (mm)
+    real, dimension(:), allocatable    :: uzsmc_ch  ! Upper zone soil moisture content change (mm)
             
+
+    real, dimension(:), allocatable    :: totsmc ! new variables to calculate total soil moisture content
+    real, dimension(:), allocatable    :: totsmc_ch  ! new variables to calculate total soil moisture content change
+
     contains
 
       procedure, public  :: initModelVar
@@ -59,25 +68,41 @@ module modelVarType
     allocate(this%sif   (1:namelist%n_hrus))
     allocate(this%bfs   (1:namelist%n_hrus))
     allocate(this%bfp   (1:namelist%n_hrus))
-    allocate(this%bfncc (1:namelist%n_hrus))   
-! -- default assignmtents
-    this%uztwc(:)      = 0.0
-    this%uzfwc(:)      = 0.0 
-    this%lztwc(:)      = 0.0 
-    this%lzfsc(:)      = 0.0 
-    this%lzfpc(:)      = 0.0
-    this%adimc(:)      = 0.0
-    this%qs(:)         = 0.0
-    this%qg(:)         = 0.0
-    this%tci(:)        = 0.0
-    this%eta(:)        = 0.0
-    this%roimp(:)      = 0.0
-    this%sdro(:)       = 0.0
-    this%ssur(:)       = 0.0
-    this%sif(:)        = 0.0
-    this%bfs(:)        = 0.0
-    this%bfp(:)        = 0.0
-    this%bfncc(:)      = 0.0
+    allocate(this%bfncc (1:namelist%n_hrus))
+    allocate(this%tci_giuh (1:namelist%n_hrus))
+    allocate(this%nwm_ponded_depth(1:namelist%n_hrus))
+    allocate(this%uzsmc(1:namelist%n_hrus))
+    allocate(this%uzsmc_ch(1:namelist%n_hrus))
+
+    allocate(this%totsmc(1:namelist%n_hrus))
+    allocate(this%totsmc_ch(1:namelist%n_hrus))
+
+    ! -- default assignmtents
+    this%uztwc(:)          = 0.0
+    this%uzfwc(:)          = 0.0
+    this%lztwc(:)          = 0.0
+    this%lzfsc(:)          = 0.0
+    this%lzfpc(:)          = 0.0
+    this%adimc(:)          = 0.0
+    this%qs(:)             = 0.0
+    this%qg(:)             = 0.0
+    this%tci(:)            = 0.0
+    this%eta(:)            = 0.0
+    this%roimp(:)          = 0.0
+    this%sdro(:)           = 0.0
+    this%ssur(:)           = 0.0
+    this%sif(:)            = 0.0
+    this%bfs(:)            = 0.0
+    this%bfp(:)            = 0.0
+    this%bfncc(:)          = 0.0
+    this%tci_giuh(:)       = 0.0
+    this%nwm_ponded_depth(:)  = 0.0
+    this%uzsmc(:)          = 0.0
+    this%uzsmc_ch(:)       = 0.0
+
+    this%totsmc(:)         = 0.0
+    this%totsmc_ch(:)      = 0.0
+
   end subroutine initModelVar
 
 end module modelVarType

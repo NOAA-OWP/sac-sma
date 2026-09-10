@@ -11,12 +11,16 @@ type, public :: parameters_type
 
   ! Sac model params in the sac param file
   character(len = 20), dimension(:), allocatable :: hru_id     ! local hru ids for multiple hrus
-  DOUBLE PRECISION, dimension(:), allocatable                :: hru_area   ! sq-km, needed for combination & routing conv.
-  DOUBLE PRECISION, dimension(:), allocatable                :: uztwm, uzfwm, lztwm, lzfsm, lzfpm, adimp
-  DOUBLE PRECISION, dimension(:), allocatable                :: uzk, lzpk, lzsk, zperc, rexp
-  DOUBLE PRECISION, dimension(:), allocatable                :: pctim, pfree, riva, side, rserv
+  real, dimension(:), allocatable                :: hru_area   ! sq-km, needed for combination & routing conv.
+  real, dimension(:), allocatable                :: uztwm, uzfwm, lztwm, lzfsm, lzfpm, adimp
+  real, dimension(:), allocatable                :: uzk, lzpk, lzsk, zperc, rexp
+  real, dimension(:), allocatable                :: pctim, pfree, riva, side, rserv
+  real(kind=8), dimension(:), allocatable        :: giuh_ordinates
+  character(len=50)                              :: giuh_info
+  integer                                        :: num_giuh_ordinates
+
   ! derived vars
-  DOUBLE PRECISION                                           :: total_area  ! total basin area used in averaging outputs
+  real                                           :: total_area  ! total basin area used in averaging outputs
 
   contains
 
@@ -53,10 +57,10 @@ contains
     allocate(this%side(n_hrus))
     allocate(this%rserv(n_hrus))    
 
-    
     ! assign defaults (if any)
     this%total_area  = huge(1.0)
-    
+    this%num_giuh_ordinates = 0
+
   end subroutine initParams
 
 end module parametersType

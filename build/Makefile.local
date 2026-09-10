@@ -54,7 +54,7 @@ ifeq "$(FC)" "gfortran"
   FLAGS77 = -O3 -fno-align-commons -ffree-line-length-none -cpp -fcheck=all
 endif
 
-# Check if FC contains the substring "ifort" OR "ifx" 
+# Check if FC contains the substring "ifort" OR "ifx"
 # This covers ifort, mpiifort, ifx, and mpiifx.
 INTEL_COMPILER_CHECK = $(findstring ifort,$(FC)) $(findstring ifx,$(FC))
 
@@ -105,8 +105,7 @@ run_util = \
         modelVarType.f90 \
         derivedType.f90\
         ioModule.f90 \
-        sacLogger.f90 \
-        runSac.f90
+        runSac.f90 
 
 fdatetime_util = datetime_module.f90
 
@@ -138,7 +137,6 @@ devel: model link
 check:
 	echo test
 	echo $(FC)
-
 
 # compile model code
 model:
