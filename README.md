@@ -2,7 +2,7 @@
 
 **Description**:  A BMI enabled version of the Sacramento Soil Moisture Accounting (Sac-SMA) model.  
 
-This version of Sac-SMA allows for multiple hydrologic response units (HRUs) to be modeled at once.  It was built to run standalone as well as in the [ngen framework](https://github.com/NOAA-OWP/ngen).
+This version of Sac-SMA was built to run standalone as well as in the [ngen framework](https://github.com/NOAA-OWP/ngen). In standalone mode, multiple hydrologic response units (HRUs) can be modeled at once. Multiple HRUs are not currently supported in the NextGen BMI: each model instance represents a single HRU, and only the first HRU in the parameter file is used.
 
 Primary Language: Fortran
 
