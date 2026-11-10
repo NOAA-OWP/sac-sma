@@ -2,7 +2,7 @@
 
 **Description**:  A BMI enabled version of the Sacramento Soil Moisture Accounting (Sac-SMA) model.  
 
-This version of Sac-SMA was built to run standalone as well as in the [ngen framework](https://github.com/NOAA-OWP/ngen). In standalone mode, multiple hydrologic response units (HRUs) can be modeled at once. Multiple HRUs are not currently supported in the NextGen BMI: each model instance represents a single HRU, and only the first HRU in the parameter file is used.
+This version of Sac-SMA was built to run standalone as well as in the [ngen framework](https://github.com/NOAA-OWP/ngen). Both modes run the model through the same BMI interface; the standalone executable is a small driver that calls it. The difference is that the standalone build reads forcings from files and writes outputs to files, while the NextGen build compiles that file I/O out and exchanges forcings and outputs with NextGen through BMI `set_value`/`get_value`. In standalone mode, multiple hydrologic response units (HRUs) can be modeled at once. Multiple HRUs are not currently supported in the NextGen BMI: each model instance represents a single HRU, and only the first HRU in the parameter file is used.
 
 Primary Language: Fortran
 
@@ -27,7 +27,8 @@ Generate a CMake build system and directory (in the example below and those that
 cmake -B cmake_build -S .
 ```
 
-Note that you may need or want to specify the Fortran compiler, done by supplying a value for the `FC` variable when you generate the build directory.  There are many reasons for that:  maybe you have multiple compilers installed, or maybe your compiler isn't installed to the standard system path or using a standard name CMake will recognize.```
+Note that you may need or want to specify the Fortran compiler, done by supplying a value for the `FC` variable when you generate the build directory.  There are many reasons for that:  maybe you have multiple compilers installed, or maybe your compiler isn't installed to the standard system path or using a standard name CMake will recognize.
+
 Regardless, if necessary just append `FC=<path_to_compiler>` to the rest of the command:
 ```bash
 # Here we are manually telling CMake to use '/opt/local/bin/gfortran-mp-14' as the Fortran compiler,
@@ -88,9 +89,62 @@ Once you build the shared library, you should see the shared library in build di
 ### Example Config
 The [ngen_files/](./ngen_files) directory has a few example configurations that you can use to test running the Sac-SMA model in ngen.  Just make sure to update the path of the Sac-SMA shared library in the `library_file` parameter to point to wherever your build shared library is (you may need to do something similar for the configured PET shared library).
 
+## Namelist
+
+Every run is configured by a Fortran namelist file with a single `&SAC_CONTROL` group. In standalone mode the namelist path is the command-line argument (default `namelist.input` if none is given); in NextGen it is the `init_config` of the Sac-SMA formulation in the realization file. Keys and the group name are case-insensitive, keys can be in any order, and comments start with `!`. Include all 13 keys. The model sets no defaults, so a key that is left out has no defined value (gfortran typically reads it as 0 or blank). Examples: [standalone](./test_cases/ex1/run/namelist.bmi.HHWM8) and [NextGen](./ngen_files/sac-init-HHWM8.namelist.input).
+
+Key | Type | Description
+----|------|------------
+main_id | string (max 20 chars) | Basin or gage label. Used to name the combined (area-weighted) output file.
+n_hrus | integer | Number of HRUs to read from the parameter file. Use 1 in NextGen, where only one HRU is exposed through BMI.
+forcing_root | string | Standalone: path prefix for forcing files. The file for each HRU is `<forcing_root><hru_id>.csv`.
+output_root | string | Standalone: path prefix for output files. The combined output is `<output_root><main_id>.txt`.
+output_hrus | integer (0/1) | Standalone: also write one output file per HRU, <output_root><hru_id>.txt. With a single HRU (n_hrus = 1) the file only gets a header, because the combined output already holds the same data.
+sac_param_file | string | Path to the [parameter file](#parameters).
+start_datehr | string `YYYYMMDDHH` | Date and hour of the first timestep.
+end_datehr | string `YYYYMMDDHH` | Date and hour of the last timestep (inclusive).
+model_timestep | integer | Timestep in seconds (e.g. 3600 for hourly, 86400 for daily).
+warm_start_run | integer (0/1) | Read initial states from state files instead of starting from default states.
+write_states | integer (0/1) | Write states at every timestep to state files.
+sac_state_in_root | string | Path prefix for state files to read when `warm_start_run = 1`. The file for each HRU is `<sac_state_in_root><hru_id>.txt`.
+sac_state_out_root | string | Path prefix for state files to write when `write_states = 1`. The file for each HRU is `<sac_state_out_root><hru_id>.txt`.
+
+> [!IMPORTANT]
+> Quote every string value, including the dates: `start_datehr = '2015100100'`, not `start_datehr = 2015100100`. The Fortran standard (since Fortran 90; section 13.11.3.3 in Fortran 2018) requires character values in namelist input to be enclosed in apostrophes or quotation marks. Earlier compilers have accepted unquoted values, but gfortran 16 stops with `Missing quote while reading item N`.
+
+### Namelist in NextGen
+
+NextGen supplies the forcing (configured in the realization file) and handles the outputs through BMI. `forcing_root`, `output_root` and `output_hrus` are parsed but not used in the NextGen build, so they can be set to a placeholder such as `'/dev/null'`.
+
+The model reports its start time, end time and timestep through BMI from `start_datehr`, `end_datehr` and `model_timestep`. NextGen reads the forcing from the realization's start time regardless of `start_datehr`, so set these keys as follows:
+
+- `start_datehr`: the realization's `start_time`. A mismatch is not detected, but the model's time labels will be wrong.
+- `end_datehr`: at least one timestep after the realization's `end_time`. Any later date also works, because NextGen stops the run at its own `end_time`. Before each step NextGen checks that the step ends at or before the model's end time, so if `end_datehr` equals the realization's end, the last step fails with "exceeds model end time". Setting `allow_exceed_end_time: true` on the formulation in the realization file skips this check; the [example realization](./ngen_files/example_realization_w_pet_sac.json) does so, which is why the [example namelist](./ngen_files/sac-init-HHWM8.namelist.input) uses the realization's end time.
+- `model_timestep`: the realization's `output_interval`. Different values are not supported. The model uses the timestep to convert the precipitation and PET rates to depths, and when the two differ NextGen calls BMI `update_until`, which in the current version can loop forever instead of returning an error.
+
+A minimal NextGen namelist for a realization running hourly from `2015-10-01 00:00:00` to `2024-09-30 23:00:00`:
+
+```fortran
+&sac_control
+    main_id = 'cat-511'
+    n_hrus = 1
+    forcing_root = '/dev/null'
+    output_root = '/dev/null'
+    output_hrus = 0
+    sac_param_file = '/path/to/sacsma_params_cat-511.txt'
+    start_datehr = '2015100100'
+    end_datehr = '2024100100'   ! one timestep after the realization end_time
+    model_timestep = 3600
+    warm_start_run = 0
+    write_states = 0
+    sac_state_in_root = '/dev/null'
+    sac_state_out_root = '/dev/null'
+/
+```
+
 ## Parameters
 
-The table below lists the 18 lines required in the parameter file (the file named by `sac_param_file` in the namelist): 2 HRU metadata lines and 16 model parameters. Each line holds a parameter name followed by one value per HRU, separated by spaces (not tabs). Lines can be in any order, but names are case-sensitive. An [example parameter file](https://github.com/NOAA-OWP/sac-sma/tree/master/test_cases/ex1/input/params) is available in the test case.
+The table below lists the 18 lines required in the parameter file (the file named by `sac_param_file` in the [namelist](#namelist)): 2 HRU metadata lines and 16 model parameters. Each line holds a parameter name followed by one value per HRU, separated by spaces (not tabs). Lines can be in any order, but names are case-sensitive. An [example parameter file](https://github.com/NOAA-OWP/sac-sma/tree/master/test_cases/ex1/input/params) is available in the test case.
 
 In NextGen, model parameters can also be set with `model_params` in the realization file, using the same names, which overrides the parameter file (first HRU only). [Figure 1](#fig-sac-sma-conceptual) shows where each parameter acts in the model structure. See [[2]](#ref-nws-2002) for additional details about the conceptual meaning of each parameter.
 
